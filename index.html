@@ -472,7 +472,7 @@
                     </div>
 
                     <!-- Card: Tenable -->
-                    <div class="product-card" data-product="tenable">
+                    <a href="frontend/tenable_vm/dashboard_agentes_tenable_vm.html" style="text-decoration: none;"><div class="product-card" data-product="tenable">
                         <div class="card-glow" style="background: radial-gradient(circle at center, rgba(0, 163, 224, 0.08), transparent 70%);"></div>
                         <div class="card-header"><button class="card-menu">⋯</button></div>
                         <div class="product-logo-wrapper">
@@ -493,7 +493,7 @@
                             <h3 class="product-title">Tenable One</h3>
                             <p class="product-description">Plataforma unificada de Exposure Management e Gestão de Vulnerabilidades em larga escala.</p>
                         </div>
-                    </div>
+                    </div></a>
 
                     <!-- Card: Cymulate -->
                     <div class="product-card" data-product="cymulate">
@@ -571,10 +571,7 @@
                 card.addEventListener('click', function() {
                     const product = this.getAttribute('data-product');
                     
-                    if (product === 'tenable') {
-                        // Confirme se este é o nome do seu ficheiro principal da Tenable
-                        window.location.href = 'frontend/tenable_Vm/dashboard_agentes_tenable_vm.html'; 
-                    } else if (product === 'scorecard') {
+                   if (product === 'scorecard') {
                         alert('Ambiente Security Scorecard selecionado. (Página em desenvolvimento)');
                     } else if (product === 'cymulate') {
                         alert('Ambiente Cymulate selecionado. (Página em desenvolvimento)');
