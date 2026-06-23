@@ -556,31 +556,26 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            
-            // Lógica do Loading Overlay
-            setTimeout(() => {
-                const overlay = document.getElementById('loadingOverlay');
-                if (overlay) overlay.classList.add('hidden');
-            }, 1800);
+document.addEventListener('DOMContentLoaded', function () {
+        // Lógica do Loading Overlay
+        setTimeout(() => {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.classList.add('hidden');
+        }, 1800);
 
-            // Redirecionamento de Páginas ao clicar nos Cartões
-            const productCards = document.querySelectorAll('.product-card');
-            
-            productCards.forEach(card => {
+        // Redirecionamento apenas para os que NÃO são links (os "em desenvolvimento")
+        const productCards = document.querySelectorAll('.product-card');
+        
+        productCards.forEach(card => {
+            // Verificamos se o pai deste card NÃO é um link <a>
+            if (card.parentElement.tagName !== 'A') {
                 card.addEventListener('click', function() {
                     const product = this.getAttribute('data-product');
-                    
-                   if (product === 'scorecard') {
-                        alert('Ambiente Security Scorecard selecionado. (Página em desenvolvimento)');
-                    } else if (product === 'cymulate') {
-                        alert('Ambiente Cymulate selecionado. (Página em desenvolvimento)');
-                    } else if (product === 'orca') {
-                        alert('Ambiente Orca Security selecionado. (Página em desenvolvimento)');
-                    }
+                    alert('Ambiente ' + product + ' selecionado. (Página em desenvolvimento)');
                 });
-            });
+            }
         });
+    });
     </script>
 </body>
 </html>
