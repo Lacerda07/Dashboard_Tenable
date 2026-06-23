@@ -1,0 +1,2285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard de Gestão de Agentes | Tenable VM</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #07111f;
+      --bg-secondary: #0d1b2e;
+      --bg-card: rgba(15, 27, 46, 0.92);
+      --bg-card-soft: rgba(20, 37, 62, 0.9);
+      --line: rgba(148, 163, 184, 0.18);
+      --text: #e5edf7;
+      --muted: #8fa4bd;
+      --accent: #22d3ee;
+      --blue: #38bdf8;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --purple: #a78bfa;
+      --shadow: 0 18px 55px rgba(0, 0, 0, 0.38);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(34, 211, 238, 0.18), transparent 34%),
+        radial-gradient(circle at top right, rgba(139, 92, 246, 0.16), transparent 30%),
+        linear-gradient(135deg, var(--bg-primary), #101827 58%, #06101e);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* --- MENU SUPERIOR (TOP NAV) PROFISSIONAL --- */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      width: 100%;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: rgba(11, 20, 36, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      flex: 1; 
+    }
+
+    .nav-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex: 1;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+    }
+
+    .nav-logo img {
+      height: 42px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 12px rgba(34, 211, 238, 0.15));
+    }
+
+    .nav-menu {
+      display: flex;
+      height: 76px;
+      gap: 6px;
+    }
+
+    .nav-item {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.2s, background 0.2s;
+    }
+
+    .nav-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-item::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 16px;
+      right: 16px;
+      height: 3px;
+      background: var(--accent);
+      border-radius: 4px 4px 0 0;
+      opacity: 0;
+      transition: 0.2s;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .nav-item:hover::after, .nav-item.active::after {
+      opacity: 1;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 200px;
+      background: rgba(15, 27, 46, 0.98);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-top: none;
+      border-radius: 0 0 14px 14px;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(10px);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .dropdown-menu::before {
+      content: "";
+      position: absolute;
+      top: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .nav-item:hover .dropdown-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .dropdown-item {
+      padding: 10px 14px;
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      text-transform: none;
+      letter-spacing: normal;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .dropdown-item:hover, .dropdown-item.active {
+      background: rgba(34, 211, 238, 0.12);
+      color: var(--accent);
+    }
+
+    .home-btn {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.4);
+      transition: all 0.2s ease;
+      text-decoration: none;
+      --pld-icon-strokeWidth: 1.5;
+    }
+
+    .home-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .home-btn:hover {
+      color: #fff;
+      border-color: var(--accent);
+      background: rgba(34, 211, 238, 0.1);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2);
+      transform: translateY(-1px);
+    }
+    /* ------------------------------------------- */
+
+    .app-shell {
+      width: 100%;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .content-shell {
+      width: 100%;
+      max-width: 1540px;
+      margin: 0 auto;
+      padding: 30px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .content-shell>.hero,
+    .content-shell>.page {
+      width: 100%;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 30px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background:
+        linear-gradient(135deg, rgba(15, 27, 46, 0.96), rgba(13, 27, 46, 0.76)),
+        linear-gradient(90deg, rgba(34, 211, 238, 0.12), rgba(139, 92, 246, 0.12));
+      box-shadow: var(--shadow);
+    }
+
+    .hero-content {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1.4fr 0.85fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(34, 211, 238, 0.26);
+      color: #b6f1ff;
+      background: rgba(34, 211, 238, 0.09);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .subtitle {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.55;
+      max-width: 920px;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: -60px -90px auto auto;
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.28), transparent 68%);
+      filter: blur(2px);
+    }
+
+    .upload-panel {
+      border: 1px dashed rgba(34, 211, 238, 0.38);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(20, 37, 62, 0.92), rgba(15, 27, 46, 0.86));
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-height: 230px;
+      justify-content: center;
+      transition: all 0.18s ease;
+    }
+
+    .upload-panel.dragging {
+      border-color: rgba(34, 211, 238, 0.95);
+      background: rgba(34, 211, 238, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .upload-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .upload-hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .upload-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .file-input-wrap {
+      position: relative;
+      display: inline-flex;
+      width: fit-content;
+    }
+
+    .file-input-wrap input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 20px;
+      color: #06101e;
+      background: linear-gradient(135deg, var(--accent), #60a5fa);
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(34, 211, 238, 0.22);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 34px rgba(34, 211, 238, 0.3);
+    }
+
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 12px;
+      padding: 11px 20px;
+      color: #e5edf7;
+      background: rgba(15, 23, 42, 0.4);
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(148, 163, 184, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .status {
+      min-height: 22px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .status.ok { color: #86efac; }
+    .status.error { color: #fca5a5; }
+
+    .meta-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .meta-chip {
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.42);
+      font-size: 12px;
+    }
+
+    .page {
+      width: 100%;
+      margin: 0 auto;
+      padding: 22px 0;
+    }
+
+    .control-grid {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .control-grid .field {
+      flex: 1 1 280px;
+    }
+
+    .field label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: rgba(15, 23, 42, 0.55);
+      color: var(--text);
+    }
+
+    .status-line {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .warning {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: rgba(245, 158, 11, 0.14);
+      border: 1px solid rgba(245, 158, 11, 0.28);
+      color: #fde68a;
+      border-radius: 12px;
+      display: none;
+      font-size: 13px;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(150px, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .kpi {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2);
+      min-height: 108px;
+    }
+
+    .kpi .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.055em;
+    }
+
+    .kpi .value {
+      font-size: 32px;
+      font-weight: 900;
+      margin: 10px 0 4px;
+      letter-spacing: -0.04em;
+      color: #fff;
+    }
+
+    .kpi .hint {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .kpi.accent { border-top: 4px solid var(--accent); }
+    .kpi.green { border-top: 4px solid var(--green); }
+    .kpi.red { border-top: 4px solid var(--red); }
+    .kpi.blue { border-top: 4px solid var(--blue); }
+    .kpi.yellow { border-top: 4px solid var(--yellow); }
+    .kpi.purple { border-top: 4px solid var(--purple); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.2);
+      padding: 18px;
+      min-height: 360px;
+    }
+
+    .card.full { grid-column: span 12; }
+    .card.half { grid-column: span 6; }
+    .card.third { grid-column: span 4; }
+    .card.eight { grid-column: span 8; }
+    .card.four { grid-column: span 4; }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .card h2 {
+      font-size: 17px;
+      line-height: 1.25;
+      margin: 0 0 4px;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      height: 292px;
+    }
+
+    .chart-wrap.tall { height: 430px; }
+    .chart-wrap.medium { height: 340px; }
+
+    .table-card {
+      min-height: 440px;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      max-height: 520px;
+      background: linear-gradient(180deg, rgba(15, 27, 46, 0.98), rgba(13, 27, 46, 0.95));
+    }
+    
+    .h1-title{
+      margin: 0;
+      font-size: 30px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      font-size: 12.5px;
+      background: transparent;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: rgba(15, 27, 46, 0.98);
+      color: #c7f9ff;
+      text-align: left;
+      padding: 10px 11px;
+      white-space: nowrap;
+      font-weight: 850;
+      z-index: 1;
+    }
+
+    td {
+      padding: 9px 11px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      color: var(--text);
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    tr:hover td {
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .pill.online {
+      color: #86efac;
+      background: rgba(34, 197, 94, 0.13);
+      border-color: rgba(34, 197, 94, 0.28);
+    }
+
+    .pill.offline {
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.13);
+      border-color: rgba(239, 68, 68, 0.28);
+    }
+
+    .pill.healthy {
+      color: #86efac;
+      background: rgba(34, 197, 94, 0.13);
+      border-color: rgba(34, 197, 94, 0.28);
+    }
+
+    .pill.warning {
+      color: #fde68a;
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.28);
+    }
+
+    .pill.critical {
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.13);
+      border-color: rgba(239, 68, 68, 0.28);
+    }
+
+    .pill.neutral {
+      color: #e2e8f0;
+      background: rgba(148, 163, 184, 0.12);
+      border-color: rgba(148, 163, 184, 0.22);
+    }
+
+    .empty-state {
+      width: 100%;
+      min-height: 0;
+      padding: 36px 28px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--bg-card);
+      color: var(--muted);
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow);
+      margin-top: 22px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 1100px) {
+      .top-nav { padding: 0 16px; overflow-x: auto; gap: 24px; justify-content: flex-start;}
+      .nav-left { flex: 0 0 auto; }
+      .nav-center { flex: 1 0 auto; }
+      .nav-right { flex: 0 0 auto; margin-left: auto; }
+
+      .kpis {
+        grid-template-columns: repeat(3, minmax(150px, 1fr));
+      }
+
+      .card.half,
+      .card.third,
+      .card.eight,
+      .card.four {
+        grid-column: span 12;
+      }
+
+      .chart-wrap.tall {
+        height: 360px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .hero { padding: 22px 18px 30px; }
+      .hero-content { grid-template-columns: 1fr; }
+      .page { padding: 0 14px; }
+      .control-grid { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      @page { size: landscape; margin: 10mm; }
+      
+      body, html { 
+        background: #07111f !important; 
+        color: #e5edf7 !important; 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+        height: auto !important; 
+        overflow: visible !important; 
+      }
+      
+      .top-nav, .hero, .no-print, .chart-modal, .table-modal, #btnExport, .control-grid, #guideModal { 
+        display: none !important; 
+      }
+      
+      .app-shell { padding: 0 !important; margin: 0 !important; max-width: 100% !important; display: block !important; }
+      #dashboardContent { display: block !important; margin-top: 0 !important; }
+      
+      .kpis { display: flex !important; flex-wrap: wrap !important; gap: 10px !important; margin-bottom: 20px !important; }
+      .kpi { flex: 1 1 30% !important; page-break-inside: avoid !important; break-inside: avoid !important; margin-bottom: 10px !important; box-shadow: none !important; }
+      
+      .grid { display: flex !important; flex-wrap: wrap !important; gap: 15px !important; margin-bottom: 20px !important; page-break-inside: auto !important; }
+      
+      .card { 
+        flex: 1 1 calc(50% - 15px) !important; 
+        page-break-inside: avoid !important; 
+        break-inside: avoid !important; 
+        overflow: visible !important; 
+        height: auto !important; 
+        display: flex !important;
+        flex-direction: column !important;
+        background: rgba(15, 27, 46, 0.95) !important;
+        border: 1px solid rgba(148, 163, 184, 0.3) !important; 
+        margin-bottom: 20px !important; 
+        box-shadow: none !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      
+      .card.full, .card.table-card { flex: 1 1 100% !important; }
+      
+      .chart-wrap { height: 292px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+      .chart-wrap.tall { height: 430px !important; }
+      .chart-wrap.medium { height: 340px !important; }
+
+      .chart-wrap canvas {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        max-width: 100% !important;
+      }
+      
+      .table-wrap { max-height: none !important; overflow: visible !important; height: auto !important; }
+      table { width: 100% !important; page-break-inside: auto !important; break-inside: auto !important; }
+      thead { display: table-header-group !important; } 
+      tbody { display: table-row-group !important; }
+      tr, th, td { page-break-inside: avoid !important; break-inside: avoid !important; }
+      th { position: static !important; }
+      
+      ::-webkit-scrollbar { display: none; }
+    }
+
+    /* Modal Styles */
+    .chart-modal[hidden], .table-modal[hidden] {
+      display: none !important;
+    }
+
+    .chart-modal, .table-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .chart-modal-backdrop, .table-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .chart-modal-dialog {
+      position: relative;
+      width: min(1180px, 100%);
+      max-height: calc(100vh - 48px);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg, 22px);
+      background: linear-gradient(180deg, rgba(15, 27, 46, 0.98), rgba(8, 15, 28, 0.98));
+      box-shadow: var(--shadow);
+    }
+
+    .table-modal-dialog {
+      position: relative;
+      width: min(1320px, 100%);
+      max-height: calc(100vh - 48px);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg, 22px);
+      background: linear-gradient(180deg, rgba(15, 27, 46, 0.98), rgba(8, 15, 28, 0.98));
+      box-shadow: var(--shadow);
+    }
+
+    /* Guide Modal Specific Styling */
+    .guide-modal-dialog {
+      width: min(700px, 100%);
+      padding: 28px;
+    }
+
+    .guide-content {
+      color: #94a3b8;
+      font-size: 14.5px;
+      line-height: 1.65;
+    }
+    .guide-content strong {
+      color: #e5edf7;
+    }
+    .guide-content ol {
+      padding-left: 20px;
+      margin-top: 18px;
+      margin-bottom: 24px;
+    }
+    .guide-content li {
+      margin-bottom: 14px;
+    }
+    
+    .guide-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 16px 0;
+      background: rgba(15, 23, 42, 0.5);
+      padding: 18px 24px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+    }
+    
+    .guide-columns code {
+      color: #38bdf8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13.5px;
+    }
+    
+    .guide-columns code::before {
+      content: "○";
+      margin-right: 8px;
+      font-size: 10px;
+      color: #38bdf8;
+      vertical-align: middle;
+    }
+
+    .chart-modal-header, .table-modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .chart-modal-title, .table-modal-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 850;
+      color: #fff;
+    }
+
+    .chart-modal-subtitle, .table-modal-subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .chart-modal-close, .table-modal-close {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .chart-modal-close:hover, .table-modal-close:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .btn-icon-close {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: #94a3b8;
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-icon-close:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .table-modal-body {
+      position: relative;
+      flex: 1;
+      min-height: 62vh;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 30%), linear-gradient(180deg, rgba(15, 27, 46, 0.98) 0%, rgba(15, 27, 46, 0.95) 100%);
+      padding: 16px;
+      overflow: auto;
+    }
+    
+    .guide-modal-body {
+        min-height: auto;
+        border: none;
+        background: transparent;
+        padding: 0;
+        overflow: visible;
+    }
+
+    #tableModalSlot table {
+      min-width: 1180px;
+    }
+
+    .chart-modal-body {
+      position: relative;
+      flex: 1;
+      min-height: 62vh;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 30%), linear-gradient(180deg, rgba(15, 27, 46, 0.98) 0%, rgba(15, 27, 46, 0.95) 100%);
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    .chart-modal-slot {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 62vh;
+    }
+
+    .chart-modal-slot canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    .legend-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: 12px;
+      background: rgba(2, 6, 23, 0.28);
+      color: #cbd5e1;
+      font-size: 12px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-right: 8px;
+    }
+
+    .chart-clickable {
+      cursor: zoom-in;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .chart-clickable:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+
+<body>
+  
+  <header class="top-nav">
+    <div class="nav-left">
+      <a href="../../index.html" class="nav-logo">
+        <img src="../images/logo-shield-header.png" alt="Logo Shield" />
+      </a>
+    </div>
+
+    <div class="nav-center">
+      <nav class="nav-menu">
+        
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M14.502 5.999a2.5 2.5 0 1 1 0-3.997M11 2.5H3a1.5 1.5 0 1 0 0 3h8M1.85 5l3.983 5.586M8.694 9.43 5.891 5.5M8 11.995v.01m-2.5-.174a2.5 2.5 0 0 1 5 0v.669c0 1 1 .96 1.042 2H4.505c-.005-1.04.995-1 .995-2v-.67Z"></path>
+            </svg>
+          </span>
+          Oerational Technology
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M9.99218 7.5252C8.75122 9.81068 6.96624 11.9042 5.46441 12.9372M11.417 3.67499C11.3199 4.2481 11.1565 4.84053 10.9407 5.43752M9.69429 5.66581C8.7959 4.86934 7.7354 4.19381 6.50999 3.73915M13.1917 11.1995C12.8465 9.98727 12.2006 8.61567 11.2464 7.35127M3.55783 12.7451C2.29138 11.5591 1.5 9.87188 1.5 7.99986C1.5 7.48353 1.5602 6.98127 1.67397 6.4997M12.403 12.7815C11.2451 13.8483 9.69863 14.4999 8 14.4999C7.10254 14.4999 6.24756 14.318 5.46991 13.9891M12.4221 3.2359C13.7003 4.42289 14.5 6.11798 14.5 7.99987C14.5 9.15355 14.1994 10.237 13.6723 11.1763M6.45841 1.68377C6.95257 1.56357 7.46885 1.49986 8 1.49986C8.88689 1.49986 9.7323 1.67749 10.5026 1.9991M4.5 2.99986C4.5 3.82829 3.82843 4.49986 3 4.49986C2.17157 4.49986 1.5 3.82829 1.5 2.99986C1.5 2.17144 2.17157 1.49986 3 1.49986C3.82843 1.49986 4.5 2.17144 4.5 2.99986ZM12.6667 2.53504C12.6667 3.16924 12.1525 3.68336 11.5183 3.68336C10.8841 3.68336 10.37 3.16924 10.37 2.53504C10.37 1.90084 10.8841 1.38672 11.5183 1.38672C12.1525 1.38672 12.6667 1.90084 12.6667 2.53504ZM5.59832 13.4647C5.59832 14.0989 5.0842 14.613 4.45 14.613C3.8158 14.613 3.30168 14.0989 3.30168 13.4647C3.30168 12.8305 3.8158 12.3164 4.45 12.3164C5.0842 12.3164 5.59832 12.8305 5.59832 13.4647ZM14.6 12.3164C14.6 12.9506 14.0859 13.4647 13.4517 13.4647C12.8175 13.4647 12.3034 12.9506 12.3034 12.3164C12.3034 11.6822 12.8175 11.1681 13.4517 11.1681C14.0859 11.1681 14.6 11.6822 14.6 12.3164ZM11.6377 6.49366C11.6377 7.12786 11.1236 7.64198 10.4894 7.64198C9.85518 7.64198 9.34106 7.12786 9.34106 6.49366C9.34106 5.85946 9.85518 5.34534 10.4894 5.34534C11.1236 5.34534 11.6377 5.85946 11.6377 6.49366Z"></path>
+            </svg>
+          </span>
+          Attack Surface Management
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="M15.5 14v1.5h-5v-5h3m-1 2 1 1 2-3m-10-5L4 7l1.5 1.5m1.5 0 1-3m1.52 0L11 7 9.52 8.5m3.98 0V2.498a.998.998 0 0 0-.998-.998H2.498a.998.998 0 0 0-.998.998v8.044c0 .551.447.998.998.998H8.5m-7-8.04h12"></path>
+            </svg>
+          </span>
+          Security Tools
+          <div class="dropdown-menu">
+            <a href="../TENABLE TOOLS/Custom_audit.html" class="dropdown-item">Custom Audit</a>
+          </div>
+        </div>
+
+        <div class="nav-item active">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="m9.5 9.5 2-2-2-.98 1.97-1.99L9.5 3.5l1.643-1.643L8 1 2.5 2.5v7.031c0 2.969 2.934 4.686 5.398 5.727.065.028.139.028.204 0C10.566 14.218 13.5 12.5 13.5 9.53V2.5"></path>
+            </svg>
+          </span>
+          Vulnerability Management
+          <div class="dropdown-menu">
+            <a href="dashboard_agentes_tenable_vm.html" class="dropdown-item active">Agentes</a>
+            <a href="dashboard_gestao_ativos_tenable_vm.html" class="dropdown-item">Ativos</a>
+            <a href="Dashboard de Compliance de Host Audit.html" class="dropdown-item">Compliance</a>
+            <a href="Dashboard Tenable VM - Findings.html" class="dropdown-item">Findings</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M9.99218 7.5252C8.75122 9.81068 6.96624 11.9042 5.46441 12.9372M11.417 3.67499C11.3199 4.2481 11.1565 4.84053 10.9407 5.43752M9.69429 5.66581C8.7959 4.86934 7.7354 4.19381 6.50999 3.73915M13.1917 11.1995C12.8465 9.98727 12.2006 8.61567 11.2464 7.35127M3.55783 12.7451C2.29138 11.5591 1.5 9.87188 1.5 7.99986C1.5 7.48353 1.5602 6.98127 1.67397 6.4997M12.403 12.7815C11.2451 13.8483 9.69863 14.4999 8 14.4999C7.10254 14.4999 6.24756 14.318 5.46991 13.9891M12.4221 3.2359C13.7003 4.42289 14.5 6.11798 14.5 7.99987C14.5 9.15355 14.1994 10.237 13.6723 11.1763M6.45841 1.68377C6.95257 1.56357 7.46885 1.49986 8 1.49986C8.88689 1.49986 9.7323 1.67749 10.5026 1.9991M4.5 2.99986C4.5 3.82829 3.82843 4.49986 3 4.49986C2.17157 4.49986 1.5 3.82829 1.5 2.99986C1.5 2.17144 2.17157 1.49986 3 1.49986C3.82843 1.49986 4.5 2.17144 4.5 2.99986ZM12.6667 2.53504C12.6667 3.16924 12.1525 3.68336 11.5183 3.68336C10.8841 3.68336 10.37 3.16924 10.37 2.53504C10.37 1.90084 10.8841 1.38672 11.5183 1.38672C12.1525 1.38672 12.6667 1.90084 12.6667 2.53504ZM5.59832 13.4647C5.59832 14.0989 5.0842 14.613 4.45 14.613C3.8158 14.613 3.30168 14.0989 3.30168 13.4647C3.30168 12.8305 3.8158 12.3164 4.45 12.3164C5.0842 12.3164 5.59832 12.8305 5.59832 13.4647ZM14.6 12.3164C14.6 12.9506 14.0859 13.4647 13.4517 13.4647C12.8175 13.4647 12.3034 12.9506 12.3034 12.3164C12.3034 11.6822 12.8175 11.1681 13.4517 11.1681C14.0859 11.1681 14.6 11.6822 14.6 12.3164ZM11.6377 6.49366C11.6377 7.12786 11.1236 7.64198 10.4894 7.64198C9.85518 7.64198 9.34106 7.12786 9.34106 6.49366C9.34106 5.85946 9.85518 5.34534 10.4894 5.34534C11.1236 5.34534 11.6377 5.85946 11.6377 6.49366Z"></path>
+            </svg>
+          </span>
+          Web Application
+          <div class="dropdown-menu">
+            <a href="../TENABLE WAS/Was_app.html" class="dropdown-item">Aplicações</a>
+            <a href="../TENABLE WAS/Was_Vulnerabilidades.html" class="dropdown-item">Vulnerabilidades</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linejoin="round" stroke-miterlimit="10" d="M11.228 13.518c2.668 0 3.36-1.786 3.36-3.048 0-1.643-1.166-2.458-2.04-2.67a2.102 2.102 0 0 0-1.728-3.296c-.474 0-.907.162-1.26.427-.78-1.733-1.995-2.425-3.583-2.425-2.196 0-3.975 1.922-3.975 4.117 0 .754.222 1.452.587 2.053a2.676 2.676 0 0 0-1.07 2.134 2.69 2.69 0 0 0 2.69 2.69l7.02.018Z"></path>
+            </svg>
+          </span>
+          CLoud Security
+          <div class="dropdown-menu">
+            <a href="../TENABLE CS/CS_Findings.html" class="dropdown-item">Findings</a>
+            <a href="../TENABLE CS/CS_Vulnerabilidades.html" class="dropdown-item">Vulnerabilidades</a>
+            <a href="" class="dropdown-item">Inventário</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="M4.105 12.82v-.68a2.612 2.612 0 0 1 2.612-2.612h2.612a2.612 2.612 0 0 1 2.612 2.612v.567M2.5 2.5 8 1l5.5 1.5v7.03c0 2.97-2.934 4.688-5.398 5.728a.263.263 0 0 1-.204 0C5.434 14.218 2.5 12.5 2.5 9.531V2.5Zm7.508 2.997a2.008 2.008 0 1 1-4.016 0 2.008 2.008 0 0 1 4.016 0Z"></path>
+            </svg>
+          </span>
+          Identity Exposure
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="m1.639 6.813 1.445 5.396a1 1 0 0 0 .707.707l5.396 1.445a1 1 0 0 0 .966-.258l3.95-3.95a1 1 0 0 0 .258-.966L12.916 3.79a1 1 0 0 0-.707-.707L6.813 1.64a1 1 0 0 0-.966.258l-3.95 3.95a1 1 0 0 0-.258.966Z"></path>
+            </svg>
+          </span>
+          Exposure Management
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Exposure Cards</a>
+          </div>
+        </div>
+      </nav>
+    </div>
+
+    <div class="nav-right">
+      <a href="../../index.html" class="home-btn" aria-label="Voltar para a Home">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 16 16" fill="none" style="display: block; stroke-width: var(--pld-icon-strokeWidth);" aria-label="IconApps">
+          <path d="M4 4.5H2C1.72386 4.5 1.5 4.27614 1.5 4V2C1.5 1.72386 1.72386 1.5 2 1.5H4C4.27614 1.5 4.5 1.72386 4.5 2V4C4.5 4.27614 4.27614 4.5 4 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 4.5H7C6.72386 4.5 6.5 4.27614 6.5 4V2C6.5 1.72386 6.72386 1.5 7 1.5H9C9.27614 1.5 9.5 1.72386 9.5 2V4C9.5 4.27614 9.27614 4.5 9 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 4.5H12C11.7239 4.5 11.5 4.27614 11.5 4V2C11.5 1.72386 11.7239 1.5 12 1.5H14C14.2761 1.5 14.5 1.72386 14.5 2V4C14.5 4.27614 14.2761 4.5 14 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M4 9.5H2C1.72386 9.5 1.5 9.27614 1.5 9V7C1.5 6.72386 1.72386 6.5 2 6.5H4C4.27614 6.5 4.5 6.72386 4.5 7V9C4.5 9.27614 4.27614 9.5 4 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 9.5H7C6.72386 9.5 6.5 9.27614 6.5 9V7C6.5 6.72386 6.72386 6.5 7 6.5H9C9.27614 6.5 9.5 6.72386 9.5 7V9C9.5 9.27614 9.27614 9.5 9 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 9.5H12C11.7239 9.5 11.5 9.27614 11.5 9V7C11.5 6.72386 11.7239 6.5 12 6.5H14C14.2761 6.5 14.5 6.72386 14.5 7V9C14.5 9.27614 14.2761 9.5 14 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M4 14.5H2C1.72386 14.5 1.5 14.2761 1.5 14V12C1.5 11.7239 1.72386 11.5 2 11.5H4C4.27614 11.5 4.5 11.7239 4.5 12V14C4.5 14.2761 4.27614 14.5 4 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 14.5H7C6.72386 14.5 6.5 14.2761 6.5 14V12C6.5 11.7239 6.72386 11.5 7 11.5H9C9.27614 11.5 9.5 11.7239 9.5 12V14C9.5 14.2761 9.27614 14.5 9 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 14.5H12C11.7239 14.5 11.5 14.2761 11.5 14V12C11.5 11.7239 11.7239 11.5 12 11.5H14C14.2761 11.5 14.5 11.7239 14.5 12V14C14.5 14.2761 14.2761 14.5 14 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <div class="content-shell">
+
+      <section class="hero">
+        <div class="hero-content">
+          <div>
+            <div class="eyebrow">Tenable Vulnerability Management · Agent Report</div>
+            <h1 class="h1-title">Dashboard de Gestão de Agentes</h1>
+            <p class="subtitle">
+              Importe o Excel exportado do Tenable para visualizar online/offline,
+              dias sem scan ou comunicação, sistemas operacionais e métricas essenciais dos seus agentes.
+            </p>
+
+            <div class="meta-strip">
+              <span class="meta-chip">Ativos agrupados por <strong>Platform</strong></span>
+              <span class="meta-chip">Status de comunicação por <strong>Status</strong></span>
+              <span class="meta-chip">Validade baseada em <strong>Last Scanned</strong></span>
+            </div>
+          </div>
+
+          <div class="upload-panel">
+            <p class="upload-title">Importar arquivo Excel</p>
+            <p class="upload-hint">Selecione o arquivo .xlsx/.xls contendo as colunas exportadas do Tenable VM.</p>
+            <div class="upload-actions">
+              <div class="file-input-wrap">
+                <button id="pickFileBtn" class="btn" type="button">Selecionar Excel / CSV</button>
+                <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" />
+              </div>
+              <button id="guideBtn" class="btn-outline" type="button">💡 Como Exportar</button>
+            </div>
+            <div id="statusLine" class="status">Aguardando importação do arquivo.</div>
+            <div id="warningBox" class="warning"></div>
+          </div>
+        </div>
+      </section>
+
+      <main class="page">
+
+        <section class="control-grid hidden" aria-label="Filtro de referência e aba analisada">
+          <div class="field">
+            <label for="referenceDate">Data de referência</label>
+            <input id="referenceDate" type="date" />
+          </div>
+          <div class="field">
+            <label for="sheetSelect">Aba analisada</label>
+            <select id="sheetSelect" disabled>
+              <option>Importe um arquivo</option>
+            </select>
+          </div>
+        </section>
+
+        <section id="dashboardEmpty" class="empty-state">
+          Importe um arquivo Excel para gerar os indicadores e gráficos automaticamente.
+        </section>
+
+        <section id="dashboardContent" class="hidden">
+          
+          <div class="no-print" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 22px; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <h2 style="margin: 0; font-size: 24px; font-weight: 800; color: #fff;">Visão Geral dos Agentes</h2>
+              <p style="margin: 4px 0 0; color: var(--muted); font-size: 14px;">Arquivo carregado: <strong id="loadedInfoText" style="color: #cbd5e1;"></strong></p>
+            </div>
+            <button id="btnExport" class="btn" style="padding: 10px 18px; font-size: 14px; background: linear-gradient(135deg, var(--green), #4ade80); color: #06101e; border: none; font-weight: 800; border-radius: 12px; cursor: pointer; display: none; align-items: center;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 8px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Exportar Relatório
+            </button>
+          </div>
+          <section class="kpis">
+            <div class="kpi accent">
+              <div class="label">Total de agentes</div>
+              <div class="value" id="kpiTotal">0</div>
+              <div class="hint">Registros válidos</div>
+            </div>
+            <div class="kpi green">
+              <div class="label">Online</div>
+              <div class="value" id="kpiOnline">0</div>
+              <div class="hint">Status atual</div>
+            </div>
+            <div class="kpi red">
+              <div class="label">Offline</div>
+              <div class="value" id="kpiOffline">0</div>
+              <div class="hint">Status atual</div>
+            </div>
+            <div class="kpi blue">
+              <div class="label">Com scan em 2026</div>
+              <div class="value" id="kpiScanned2026">0</div>
+              <div class="hint">Base: Last Scanned</div>
+            </div>
+            <div class="kpi yellow">
+              <div class="label">&gt;30 dias sem scan</div>
+              <div class="value" id="kpiNoScan30">0</div>
+              <div class="hint">Base: Last Scanned</div>
+            </div>
+            <div class="kpi purple">
+              <div class="label">&gt;30 dias sem conexão</div>
+              <div class="value" id="kpiNoConnect30">0</div>
+              <div class="hint">Base: Last Connect</div>
+            </div>
+          </section>
+
+          <section class="grid">
+            <article class="card full">
+              <div class="card-header">
+                <div>
+                  <h2>Quantidade de agentes por mês em 2026</h2>
+                  <p>Contabiliza cada agente em todos os meses entre Linked On e Last Connect.</p>
+                </div>
+              </div>
+              <div class="chart-wrap medium"><canvas id="monthlyChart"></canvas></div>
+            </article>
+
+            <article class="card third">
+              <div class="card-header">
+                <div>
+                  <h2>Agentes por Sistema Operacional</h2>
+                  <p>Distribuição pela coluna Platform.</p>
+                </div>
+              </div>
+              <div class="chart-wrap"><canvas id="platformChart"></canvas></div>
+            </article>
+
+            <article class="card third">
+              <div class="card-header">
+                <div>
+                  <h2>Agentes por Status</h2>
+                  <p>Agrupamento pela coluna Status.</p>
+                </div>
+              </div>
+              <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
+            </article>
+
+            <article class="card third">
+              <div class="card-header">
+                <div>
+                  <h2>Agentes por Saúde</h2>
+                  <p>Agrupamento pela coluna Health, desconsiderando valores N/A.</p>
+                </div>
+              </div>
+              <div class="chart-wrap"><canvas id="healthChart"></canvas></div>
+            </article>
+
+            <article class="card half">
+              <div class="card-header">
+                <div>
+                  <h2>Agentes por Versão</h2>
+                  <p>Agrupamento pela coluna Version.</p>
+                </div>
+              </div>
+              <div class="chart-wrap tall"><canvas id="versionChart"></canvas></div>
+            </article>
+
+            <article class="card half">
+              <div class="card-header">
+                <div>
+                  <h2>Agentes por Grupo de Scan</h2>
+                  <p>Agrupamento pela coluna Groups; múltiplos grupos no mesmo agente são contabilizados separadamente.
+                  </p>
+                </div>
+              </div>
+              <div class="chart-wrap tall"><canvas id="groupsChart"></canvas></div>
+            </article>
+
+            <article class="card full table-card">
+              <div class="card-header">
+                <div>
+                  <h2>Top 10 agentes acima de 30 dias sem scan</h2>
+                  <p>Ordenado pela maior quantidade de dias desde Last Scanned.</p>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table id="noScanTable"></table>
+              </div>
+            </article>
+
+            <article class="card full table-card">
+              <div class="card-header">
+                <div>
+                  <h2>Top 10 agentes acima de 30 dias sem conexão</h2>
+                  <p>Ordenado pela maior quantidade de dias desde Last Connect.</p>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table id="noConnectTable"></table>
+              </div>
+            </article>
+          </section>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <div id="guideModal" class="table-modal" hidden aria-hidden="true">
+    <div id="guideModalBackdrop" class="table-modal-backdrop"></div>
+    <div class="table-modal-dialog guide-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="guideModalTitle">
+      <div class="table-modal-header">
+        <div>
+          <h3 id="guideModalTitle" class="table-modal-title">Guia de Exportação - Tenable VM</h3>
+        </div>
+        <button id="guideModalClose" class="btn-icon-close" type="button" aria-label="Fechar">✕</button>
+      </div>
+      <div class="table-modal-body guide-modal-body">
+         <div class="guide-content">
+            <p>Para garantir que o dashboard de <strong>Agentes</strong> apresente todas as informações e gráficos corretamente, siga os passos abaixo ao exportar seus dados:</p>
+            <ol>
+               <li>Acesse a plataforma do <strong>Tenable VM</strong>.</li>
+               <li>No menu lateral, navegue até a aba correspondente aos seus <strong>Agentes</strong> (ex: <i>Sensors > Agents</i>).</li>
+               <li>Aplique os filtros desejados (ex: Grupos específicos ou todos os agentes).</li>
+               <li>Clique no botão de <strong>Exportar</strong> (ícone de download na direita) e selecione o formato <strong>CSV</strong>.</li>
+               <li>Na janela que se abrir, <strong>marque obrigatoriamente</strong> as seguintes colunas:</li>
+            </ol>
+            <div class="guide-columns">
+               <div><code>Status</code></div>
+               <div><code>Platform</code></div>
+               <div><code>Health</code></div>
+               <div><code>Agent Name</code></div>
+               <div><code>Linked On</code></div>
+               <div><code>Last Scanned</code></div>
+               <div><code>IP Address</code></div>
+               <div><code>Version</code></div>
+               <div><code>Groups</code></div>
+               <div><code>Last Connect</code></div>
+            </div>
+            <p style="margin-top: 24px;">6. Clique em exportar, aguarde o download e faça o upload do arquivo gerado aqui no painel.</p>
+         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="chartModal" class="chart-modal" hidden aria-hidden="true">
+    <div id="chartModalBackdrop" class="chart-modal-backdrop"></div>
+    <div id="chartModalDialog" class="chart-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="chartModalTitle">
+      <div class="chart-modal-header">
+        <div>
+          <h3 id="chartModalTitle" class="chart-modal-title">Gráfico ampliado</h3>
+          <p id="chartModalSubtitle" class="chart-modal-subtitle"></p>
+        </div>
+        <button id="chartModalClose" class="chart-modal-close" type="button">Fechar</button>
+      </div>
+      <div class="chart-modal-body">
+        <div id="chartModalSlot" class="chart-modal-slot">
+          <canvas id="chartModalCanvas"></canvas>
+        </div>
+        <div id="chartModalLegend" class="legend-list" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tableModal" class="table-modal" hidden aria-hidden="true">
+    <div id="tableModalBackdrop" class="table-modal-backdrop"></div>
+    <div id="tableModalDialog" class="table-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="tableModalTitle">
+      <div class="table-modal-header">
+        <div>
+          <h3 id="tableModalTitle" class="table-modal-title">Tabela ampliada</h3>
+          <p id="tableModalSubtitle" class="table-modal-subtitle"></p>
+        </div>
+        <button id="tableModalClose" class="table-modal-close" type="button">Fechar</button>
+      </div>
+      <div class="table-modal-body">
+        <div id="tableModalSlot"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const requiredColumns = ["Status", "Platform", "Health", "Agent Name", "Linked On", "Last Scanned", "IP Address", "Version", "Groups", "Last Connect"];
+    const monthLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    let charts = {};
+    let workbookCache = null;
+    let currentRows = [];
+    let state = { charts: [], modalChart: null, modalFrame: null };
+    let currentFileName = "";
+    
+    // Modais Iniciais
+    const chartModal = document.getElementById("chartModal");
+    const chartModalBackdrop = document.getElementById("chartModalBackdrop");
+    const chartModalClose = document.getElementById("chartModalClose");
+    const chartModalTitle = document.getElementById("chartModalTitle");
+    const chartModalSubtitle = document.getElementById("chartModalSubtitle");
+    const chartModalSlot = document.getElementById("chartModalSlot");
+    const chartModalLegend = document.getElementById("chartModalLegend");
+    const chartModalCanvas = document.getElementById("chartModalCanvas");
+    const tableModal = document.getElementById("tableModal");
+    const tableModalBackdrop = document.getElementById("tableModalBackdrop");
+    const tableModalClose = document.getElementById("tableModalClose");
+    const tableModalTitle = document.getElementById("tableModalTitle");
+    const tableModalSubtitle = document.getElementById("tableModalSubtitle");
+    const tableModalSlot = document.getElementById("tableModalSlot");
+    
+    // Modal de Guia
+    const guideModal = document.getElementById("guideModal");
+    const guideModalBackdrop = document.getElementById("guideModalBackdrop");
+    const guideModalClose = document.getElementById("guideModalClose");
+    const guideBtn = document.getElementById("guideBtn");
+
+    const palette = ["#2563eb", "#f97316", "#16a34a", "#dc2626", "#7c3aed", "#0891b2", "#eab308", "#475569", "#db2777", "#65a30d", "#9333ea", "#0284c7"];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const today = new Date();
+      document.getElementById("referenceDate").value = toDateInput(today);
+      document.getElementById("fileInput").addEventListener("change", handleFile);
+      document.getElementById("referenceDate").addEventListener("change", () => renderDashboard(currentRows));
+      document.getElementById("sheetSelect").addEventListener("change", () => loadSheet(document.getElementById("sheetSelect").value));
+      renderEmptyState();
+
+      // Evento do botão de exportar
+      document.getElementById("btnExport").addEventListener("click", () => {
+        // Redimensiona os gráficos antes da impressão para evitar distorções
+        for (let id in Chart.instances) {
+          Chart.instances[id].resize();
+        }
+        setTimeout(() => { window.print(); }, 800);
+      });
+    });
+
+    const valueLabelsPlugin = {
+      id: "valueLabelsPlugin",
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const type = chart.config.type;
+        if (!["bar", "line", "pie", "doughnut"].includes(type)) return;
+        ctx.save();
+        ctx.font = "bold 11px Inter, Segoe UI, Arial";
+        ctx.fillStyle = "#111827";
+        ctx.textBaseline = "middle";
+
+        if (["pie", "doughnut"].includes(type)) {
+          const dataset = chart.data.datasets[0] || { data: [] };
+          const meta = chart.getDatasetMeta(0);
+          const total = dataset.data.reduce((sum, val) => sum + Number(val || 0), 0);
+          meta.data.forEach((element, index) => {
+            const value = Number(dataset.data[index] || 0);
+            if (!value || !total) return;
+            const props = element.getProps(["x", "y", "startAngle", "endAngle", "outerRadius"], true);
+            const angle = (props.startAngle + props.endAngle) / 2;
+            const x = props.x + Math.cos(angle) * (props.outerRadius + 20);
+            const y = props.y + Math.sin(angle) * (props.outerRadius + 20);
+            const pct = ((value / total) * 100).toFixed(1).replace(".", ",");
+            ctx.textAlign = x >= props.x ? "left" : "right";
+            ctx.fillText(`${formatNumber(value)} (${pct}%)`, x, y);
+          });
+          ctx.restore();
+          return;
+        }
+
+        chart.data.datasets.forEach((dataset, datasetIndex) => {
+          const meta = chart.getDatasetMeta(datasetIndex);
+          if (meta.hidden) return;
+          meta.data.forEach((element, index) => {
+            const value = dataset.data[index];
+            if (value === 0 || value === null || value === undefined || Number.isNaN(value)) return;
+            const pos = element.tooltipPosition();
+            const horizontal = chart.options.indexAxis === "y";
+            ctx.textAlign = horizontal ? "left" : "center";
+            const label = formatNumber(value);
+            const x = horizontal ? Math.min(pos.x + 8, chart.chartArea.right - 4) : pos.x;
+            const y = horizontal ? pos.y : Math.max(pos.y - 10, chart.chartArea.top + 8);
+            ctx.fillText(label, x, y);
+          });
+        });
+        ctx.restore();
+      }
+    };
+    Chart.register(valueLabelsPlugin);
+
+    async function handleFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      currentFileName = file.name;
+      document.getElementById("statusLine").textContent = `Lendo arquivo: ${file.name}`;
+      hideWarning();
+
+      const data = await file.arrayBuffer();
+      const isCsv = file.name.toLowerCase().endsWith(".csv");
+      workbookCache = XLSX.read(data, { type: "array", cellDates: true, raw: false, codepage: 65001 });
+      populateSheetSelect(workbookCache.SheetNames);
+      loadSheet(workbookCache.SheetNames[0]);
+    }
+
+    function populateSheetSelect(sheetNames) {
+      const select = document.getElementById("sheetSelect");
+      select.innerHTML = "";
+      sheetNames.forEach(name => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+      });
+      select.disabled = false;
+    }
+
+    function loadSheet(sheetName) {
+      if (!workbookCache || !workbookCache.Sheets[sheetName]) return;
+      const sheet = workbookCache.Sheets[sheetName];
+      const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false, blankrows: false });
+      const parsed = parseMatrix(matrix);
+      currentRows = parsed.rows;
+      document.getElementById("statusLine").textContent = `Aba "${sheetName}" carregada com ${formatNumber(currentRows.length)} agentes.`;
+      document.getElementById("sheetSelect").value = sheetName;
+
+      let missing = requiredColumns.filter(col => !parsed.colMap[normalize(col)]);
+      if (missing.length) {
+        const available = Object.keys(parsed.colMap || {});
+        const synonyms = {
+          status: ["state", "agent state", "agent status", "connection status", "estado", "situacao", "situao", "situação"],
+          platform: ["platform", "os", "operating system", "sistema operacional"],
+          health: ["health", "saude", "saúde"],
+          "agent name": ["agent", "agentname", "name", "hostname", "host name"],
+          "linked on": ["linked_on", "linkedon", "linked"],
+          "last scanned": ["last_scanned", "lastscan", "last scan"],
+          "ip address": ["ip", "ipaddress", "ip address"],
+          version: ["version", "versao", "versão"],
+          groups: ["group", "groups", "grupos"],
+          "last connect": ["last_connect", "lastconnect", "last connected"]
+        };
+
+        missing.forEach(col => {
+          const target = normalize(col);
+          let found = available.find(k => k.includes(target) || target.includes(k));
+          if (!found) {
+            const alts = synonyms[target] || [];
+            for (const a of alts) {
+              const an = normalize(a);
+              found = available.find(k => k.includes(an) || an.includes(k));
+              if (found) break;
+            }
+          }
+          if (found) parsed.colMap[target] = parsed.colMap[found];
+        });
+
+        missing = requiredColumns.filter(col => !parsed.colMap[normalize(col)]);
+        if (missing.length) {
+          showWarning(`Colunas não localizadas: ${missing.join(", ")}. Os gráficos relacionados podem ficar vazios.`);
+        } else {
+          hideWarning();
+        }
+      } else {
+        hideWarning();
+      }
+      renderDashboard(currentRows);
+
+      // Ativa o botão de exportar e mostra o nome do arquivo
+      document.getElementById("loadedInfoText").textContent = currentFileName;
+      document.getElementById("btnExport").style.display = "inline-flex";
+    }
+
+    function parseMatrix(matrix) {
+      const headerRowIndex = detectHeaderRow(matrix);
+      const headers = (matrix[headerRowIndex] || []).map(h => String(h || "").trim());
+      const colMap = {};
+      headers.forEach((h, i) => { if (h) colMap[normalize(h)] = i; });
+
+      const rows = matrix.slice(headerRowIndex + 1)
+        .map(row => buildObject(row, headers))
+        .filter(obj => Object.values(obj).some(v => String(v || "").trim() !== ""));
+
+      rows.colMap = colMap;
+      return { rows, headers, colMap };
+    }
+
+    function detectHeaderRow(matrix) {
+      const expected = requiredColumns.map(normalize);
+      let bestIndex = 0;
+      let bestScore = -1;
+      matrix.slice(0, 12).forEach((row, idx) => {
+        const normalized = row.map(c => normalize(c));
+        const score = expected.filter(col => normalized.includes(col)).length;
+        if (score > bestScore) {
+          bestScore = score;
+          bestIndex = idx;
+        }
+      });
+      return bestIndex;
+    }
+
+    function buildObject(row, headers) {
+      const obj = {};
+      headers.forEach((h, i) => {
+        if (h) obj[h] = row[i] ?? "";
+      });
+      return obj;
+    }
+
+    function renderDashboard(rows) {
+      if (!rows || rows.length === 0) {
+        updateKpis([]);
+        renderEmptyState();
+        return;
+      }
+
+      document.getElementById("dashboardEmpty").classList.add("hidden");
+      document.getElementById("dashboardContent").classList.remove("hidden");
+      updateKpis(rows);
+      renderMonthlyChart(rows);
+      renderPlatformChart(rows);
+      renderStatusChart(rows);
+      renderHealthChart(rows);
+      renderVersionChart(rows);
+      renderGroupsChart(rows);
+      renderAgingTable("noScanTable", rows, "Last Scanned");
+      renderAgingTable("noConnectTable", rows, "Last Connect");
+
+      // Setup chart triggers
+      setChartTrigger(document.getElementById("monthlyChart")?.closest(".chart-wrap"), "monthlyChart", "Agentes por Mês", "Distribuição de agentes por mês");
+      setChartTrigger(document.getElementById("platformChart")?.closest(".chart-wrap"), "platformChart", "Agentes por Plataforma", "Distribuição por sistema operacional");
+      setChartTrigger(document.getElementById("statusChart")?.closest(".chart-wrap"), "statusChart", "Agentes por Status", "Distribuição por status de conexão");
+      setChartTrigger(document.getElementById("healthChart")?.closest(".chart-wrap"), "healthChart", "Agentes por Saúde", "Distribuição por status de saúde");
+      setChartTrigger(document.getElementById("versionChart")?.closest(".chart-wrap"), "versionChart", "Agentes por Versão", "Distribuição por versão do agente");
+      setChartTrigger(document.getElementById("groupsChart")?.closest(".chart-wrap"), "groupsChart", "Agentes por Grupos", "Distribuição por grupo de agentes");
+
+      // Setup table triggers
+      setTableTrigger(document.getElementById("noScanTable")?.closest(".card"), "noScanTable", "Agentes sem Scan Recente", "Listagem de agentes sem scan nos últimos dias");
+      setTableTrigger(document.getElementById("noConnectTable")?.closest(".card"), "noConnectTable", "Agentes sem Conexão Recente", "Listagem de agentes sem conexão nos últimos dias");
+    }
+
+    function updateKpis(rows) {
+      const refDate = getReferenceDate();
+      const total = rows.length;
+      const online = rows.filter(r => text(r, "Status").toLowerCase() === "online").length;
+      const offline = rows.filter(r => text(r, "Status").toLowerCase() === "offline").length;
+      const scanned2026 = rows.filter(r => {
+        const d = parseAnyDate(value(r, "Last Scanned"));
+        return d && d.getFullYear() === 2026;
+      }).length;
+      const noScan30 = countOlderThan(rows, "Last Scanned", refDate, 30);
+      const noConnect30 = countOlderThan(rows, "Last Connect", refDate, 30);
+
+      setText("kpiTotal", formatNumber(total));
+      setText("kpiOnline", formatNumber(online));
+      setText("kpiOffline", formatNumber(offline));
+      setText("kpiScanned2026", formatNumber(scanned2026));
+      setText("kpiNoScan30", formatNumber(noScan30));
+      setText("kpiNoConnect30", formatNumber(noConnect30));
+    }
+
+    function renderMonthlyChart(rows) {
+      const monthlyPresence = Array(12).fill(0);
+
+      rows.forEach(row => {
+        const linkedDate = parseAnyDate(value(row, "Linked On"));
+        const connectDate = parseAnyDate(value(row, "Last Connect"));
+        if (!linkedDate && !connectDate) return;
+
+        let startDate = linkedDate || connectDate;
+        let endDate = connectDate || linkedDate;
+        if (startDate > endDate) [startDate, endDate] = [endDate, startDate];
+
+        const startMonth = startDate.getFullYear() < 2026 ? 0 : startDate.getFullYear() === 2026 ? startDate.getMonth() : 12;
+        const endMonth = endDate.getFullYear() > 2026 ? 11 : endDate.getFullYear() === 2026 ? endDate.getMonth() : -1;
+
+        if (startMonth > 11 || endMonth < 0 || startMonth > endMonth) return;
+        for (let month = startMonth; month <= endMonth; month++) {
+          monthlyPresence[month]++;
+        }
+      });
+
+      makeChart("monthlyChart", "bar", {
+        labels: monthLabels,
+        datasets: [
+          { label: "Agentes ativos entre Linked On e Last Connect", data: monthlyPresence, backgroundColor: "#2563eb", borderRadius: 8, maxBarThickness: 52 }
+        ]
+      }, stackedOptions(false));
+    }
+
+    function renderPlatformChart(rows) {
+      const entries = sortedEntries(countBy(rows, "Platform", "Não informado"));
+      makeChart("platformChart", "pie", {
+        labels: entries.map(e => e[0]),
+        datasets: [{ data: entries.map(e => e[1]), backgroundColor: palette }]
+      }, pieOptions());
+    }
+
+    function renderStatusChart(rows) {
+      const entries = sortedEntries(countBy(rows, "Status", "Não informado"));
+      makeChart("statusChart", "bar", {
+        labels: entries.map(e => e[0]),
+        datasets: [{ label: "Agentes", data: entries.map(e => e[1]), backgroundColor: entries.map(e => statusColor(e[0])), borderRadius: 8 }]
+      }, horizontalOptions());
+    }
+
+    function renderHealthChart(rows) {
+      const validRows = rows.filter(row => {
+        const health = normalize(text(row, "Health"));
+        return health && !["n a", "na", "n a", "not applicable", "nao informado", "sem status"].includes(health);
+      });
+      const entries = sortedEntries(countBy(validRows, "Health", "Não informado"));
+      makeChart("healthChart", "bar", {
+        labels: entries.map(e => e[0]),
+        datasets: [{ label: "Agentes", data: entries.map(e => e[1]), backgroundColor: entries.map(e => healthColor(e[0])), borderRadius: 8, maxBarThickness: 52 }]
+      }, stackedOptions(false));
+    }
+
+    function renderVersionChart(rows) {
+      const entries = sortedEntries(countBy(rows, "Version", "Não informado"));
+      makeChart("versionChart", "bar", {
+        labels: entries.map(e => e[0]),
+        datasets: [{ label: "Agentes", data: entries.map(e => e[1]), backgroundColor: "#2563eb", borderRadius: 8 }]
+      }, horizontalOptions());
+    }
+
+    function renderGroupsChart(rows) {
+      const counts = {};
+      rows.forEach(row => {
+        const groups = splitGroups(value(row, "Groups"));
+        if (groups.length === 0) groups.push("Não informado");
+        groups.forEach(group => counts[group] = (counts[group] || 0) + 1);
+      });
+      const entries = sortedEntries(counts);
+      makeChart("groupsChart", "bar", {
+        labels: entries.map(e => e[0]),
+        datasets: [{ label: "Agentes", data: entries.map(e => e[1]), backgroundColor: "#f97316", borderRadius: 8 }]
+      }, horizontalOptions());
+    }
+
+    function renderAgingTable(tableId, rows, dateColumn) {
+      const refDate = getReferenceDate();
+      const items = rows.map(row => {
+        const date = parseAnyDate(value(row, dateColumn));
+        const days = date ? diffDays(refDate, date) : Infinity;
+        return { row, date, days };
+      })
+        .filter(item => item.days === Infinity || item.days > 30)
+        .sort((a, b) => b.days - a.days)
+        .slice(0, 10);
+
+      const table = document.getElementById(tableId);
+      if (!items.length) {
+        table.innerHTML = `<thead><tr><th>Resultado</th></tr></thead><tbody><tr><td>Nenhum agente acima de 30 dias para ${escapeHtml(dateColumn)}.</td></tr></tbody>`;
+        return;
+      }
+
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Agente</th>
+            <th>IP</th>
+            <th>Status</th>
+            <th>Health</th>
+            <th>Platform</th>
+            <th>${escapeHtml(dateColumn)}</th>
+            <th>Dias</th>
+            <th>Version</th>
+            <th>Groups</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map((item, idx) => tableRow(item, idx, dateColumn)).join("")}
+        </tbody>`;
+    }
+
+    function tableRow(item, idx, dateColumn) {
+      const row = item.row;
+      const status = text(row, "Status") || "N/A";
+      const health = text(row, "Health") || "N/A";
+      return `
+        <tr>
+          <td>${idx + 1}</td>
+          <td><strong>${escapeHtml(text(row, "Agent Name") || "Não informado")}</strong></td>
+          <td>${escapeHtml(text(row, "IP Address") || "-")}</td>
+          <td>${pill(status, statusClass(status))}</td>
+          <td>${pill(health, healthClass(health))}</td>
+          <td>${escapeHtml(text(row, "Platform") || "-")}</td>
+          <td>${item.date ? formatDate(item.date) : "Sem registro"}</td>
+          <td><strong>${item.days === Infinity ? "Sem data" : formatNumber(item.days)}</strong></td>
+          <td>${escapeHtml(text(row, "Version") || "-")}</td>
+          <td>${escapeHtml(splitGroups(value(row, "Groups")).join(", ") || "-")}</td>
+        </tr>`;
+    }
+
+    function renderEmptyState() {
+      document.getElementById("dashboardContent").classList.add("hidden");
+      document.getElementById("dashboardEmpty").classList.remove("hidden");
+    }
+
+    function makeChart(canvasId, type, data, options) {
+      const ctx = document.getElementById(canvasId);
+      if (charts[canvasId]) charts[canvasId].destroy();
+      charts[canvasId] = new Chart(ctx, { type, data, options });
+      state.charts = Object.values(charts);
+    }
+
+    function stackedOptions(stacked = false) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 24, right: 22 } },
+        plugins: {
+          legend: { position: "bottom", labels: { boxWidth: 12, usePointStyle: true, font: { size: 11 }, color: "#cbd5e1" } },
+          tooltip: { callbacks: { label: ctx => `${ctx.dataset.label || "Agentes"}: ${formatNumber(ctx.parsed.y ?? ctx.parsed)}` } }
+        },
+        scales: {
+          x: { stacked, grid: { display: false }, ticks: { color: "#cbd5e1" } },
+          y: { stacked, beginAtZero: true, grace: "12%", grid: { color: "rgba(148, 163, 184, 0.16)" }, ticks: { precision: 0, color: "#cbd5e1" } }
+        }
+      };
+    }
+
+    function horizontalOptions() {
+      return {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { right: 38, top: 10 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => `Agentes: ${formatNumber(ctx.parsed.x)}` } }
+        },
+        scales: {
+          x: { beginAtZero: true, grace: "12%", grid: { color: "rgba(148, 163, 184, 0.16)" }, ticks: { precision: 0, color: "#cbd5e1" } },
+          y: { grid: { display: false }, ticks: { color: "#cbd5e1", autoSkip: false } }
+        }
+      };
+    }
+
+    function pieOptions() {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 28, right: 44, bottom: 28, left: 44 } },
+        plugins: {
+          legend: { position: "bottom", labels: { boxWidth: 12, usePointStyle: true, font: { size: 11 }, color: "#cbd5e1" } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                const val = ctx.parsed;
+                const pct = total ? ((val / total) * 100).toFixed(1).replace(".", ",") : 0;
+                return `${ctx.label}: ${formatNumber(val)} (${pct}%)`;
+              }
+            }
+          }
+        }
+      };
+    }
+
+    function countBy(rows, column, fallback) {
+      const counts = {};
+      rows.forEach(row => {
+        const label = text(row, column) || fallback;
+        counts[label] = (counts[label] || 0) + 1;
+      });
+      return counts;
+    }
+
+    function sortedEntries(counts) {
+      return Object.entries(counts).sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0]), "pt-BR"));
+    }
+
+    function countOlderThan(rows, column, refDate, daysLimit) {
+      return rows.filter(row => {
+        const d = parseAnyDate(value(row, column));
+        if (!d) return true;
+        return diffDays(refDate, d) > daysLimit;
+      }).length;
+    }
+
+    function value(row, column) {
+      if (!row) return "";
+      const target = normalize(column);
+      const key = Object.keys(row).find(k => normalize(k) === target);
+      return key ? row[key] : "";
+    }
+
+    function text(row, column) {
+      return String(value(row, column) ?? "").trim();
+    }
+
+    function normalize(v) {
+      return String(v ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    }
+
+    function splitGroups(raw) {
+      const value = String(raw || "").trim();
+      if (!value) return [];
+      return value
+        .split(/[|;,]+/)
+        .map(v => v.trim())
+        .filter(Boolean);
+    }
+
+    function parseAnyDate(raw) {
+      if (raw === null || raw === undefined || raw === "") return null;
+      if (raw instanceof Date && !isNaN(raw.getTime())) return raw;
+      if (typeof raw === "number") {
+        const parsed = XLSX.SSF.parse_date_code(raw);
+        if (!parsed) return null;
+        return new Date(parsed.y, parsed.m - 1, parsed.d, parsed.H || 0, parsed.M || 0, Math.floor(parsed.S || 0));
+      }
+      let s = String(raw).trim();
+      if (!s || ["n/a", "na", "null", "none", "-"].includes(s.toLowerCase())) return null;
+
+      let d = new Date(s);
+      if (!isNaN(d.getTime())) return d;
+
+      const br = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+      if (br) {
+        const year = Number(br[3].length === 2 ? "20" + br[3] : br[3]);
+        d = new Date(year, Number(br[2]) - 1, Number(br[1]), Number(br[4] || 0), Number(br[5] || 0), Number(br[6] || 0));
+        if (!isNaN(d.getTime())) return d;
+      }
+      return null;
+    }
+
+    function diffDays(newerDate, olderDate) {
+      const start = Date.UTC(olderDate.getFullYear(), olderDate.getMonth(), olderDate.getDate());
+      const end = Date.UTC(newerDate.getFullYear(), newerDate.getMonth(), newerDate.getDate());
+      return Math.floor((end - start) / 86400000);
+    }
+
+    function getReferenceDate() {
+      const raw = document.getElementById("referenceDate").value;
+      return raw ? new Date(`${raw}T00:00:00`) : new Date();
+    }
+
+    function toDateInput(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function formatDate(date) {
+      return date.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+    }
+
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString("pt-BR");
+    }
+
+    function formatPercent(value) {
+      return `${new Intl.NumberFormat("pt-BR", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1
+      }).format(Number(value || 0))}%`;
+    }
+
+    function statusColor(status) {
+      const s = String(status).toLowerCase();
+      if (s.includes("online")) return "#16a34a";
+      if (s.includes("offline")) return "#dc2626";
+      return "#64748b";
+    }
+
+    function healthColor(health) {
+      const h = String(health).toLowerCase();
+      if (h.includes("healthy")) return "#16a34a";
+      if (h.includes("warning")) return "#eab308";
+      if (h.includes("critical")) return "#dc2626";
+      if (h.includes("safe")) return "#7c3aed";
+      return "#64748b";
+    }
+
+    function statusClass(status) {
+      const s = String(status).toLowerCase();
+      if (s.includes("online")) return "online";
+      if (s.includes("offline")) return "offline";
+      return "neutral";
+    }
+
+    function healthClass(health) {
+      const h = String(health).toLowerCase();
+      if (h.includes("healthy")) return "healthy";
+      if (h.includes("warning")) return "warning";
+      if (h.includes("critical")) return "critical";
+      return "neutral";
+    }
+
+    function pill(label, cls) {
+      return `<span class="pill ${cls}">${escapeHtml(label)}</span>`;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function emptyTable(message) {
+      return `<thead><tr><th>Mensagem</th></tr></thead><tbody><tr><td>${escapeHtml(message)}</td></tr></tbody>`;
+    }
+
+    function showWarning(message) {
+      const box = document.getElementById("warningBox");
+      box.style.display = "block";
+      box.textContent = message;
+    }
+
+    function hideWarning() {
+      const box = document.getElementById("warningBox");
+      box.style.display = "none";
+      box.textContent = "";
+    }
+
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = value;
+    }
+
+    function setChartTrigger(element, chartId, title, subtitle) {
+      if (!element) return;
+      element.classList.add("chart-clickable");
+      element.dataset.chartId = chartId;
+      element.dataset.chartTitle = title;
+      element.dataset.chartSubtitle = subtitle || "";
+      element.setAttribute("role", "button");
+      element.setAttribute("tabindex", "0");
+      element.onclick = () => openChartModal(chartId, title, subtitle || "");
+      element.onkeydown = (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openChartModal(chartId, title, subtitle || "");
+        }
+      };
+    }
+
+    function setTableTrigger(element, tableId, title, subtitle) {
+      if (!element) return;
+      element.classList.add("chart-clickable");
+      element.setAttribute("role", "button");
+      element.setAttribute("tabindex", "0");
+      element.onclick = () => openTableModal(tableId, title, subtitle || "");
+      element.onkeydown = (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openTableModal(tableId, title, subtitle || "");
+        }
+      };
+    }
+
+    function openTableModal(tableId, title, subtitle) {
+      const sourceTable = document.getElementById(tableId);
+      if (!sourceTable) return;
+
+      tableModalTitle.textContent = title || "Tabela ampliada";
+      tableModalSubtitle.textContent = subtitle || "";
+      tableModalSlot.innerHTML = sourceTable.outerHTML;
+
+      tableModal.hidden = false;
+      tableModal.setAttribute("aria-hidden", "false");
+      document.body.classList.add("modal-open");
+    }
+
+    function closeTableModal() {
+      tableModal.hidden = true;
+      tableModal.setAttribute("aria-hidden", "true");
+      tableModalSlot.innerHTML = "";
+      document.body.classList.remove("modal-open");
+    }
+
+    function openChartModal(chartId, title, subtitle) {
+      const sourceChart = state.charts.find((chart) => chart.canvas && chart.canvas.id === chartId);
+      if (!sourceChart) return;
+
+      if (state.modalFrame) {
+        cancelAnimationFrame(state.modalFrame);
+        state.modalFrame = null;
+      }
+
+      if (state.modalChart) {
+        state.modalChart.destroy();
+        state.modalChart = null;
+      }
+
+      chartModalTitle.textContent = title || "Gráfico ampliado";
+      chartModalSubtitle.textContent = subtitle || "";
+
+      chartModal.hidden = false;
+      chartModal.setAttribute("aria-hidden", "false");
+      document.body.classList.add("modal-open");
+
+      if (chartModalLegend) {
+        chartModalLegend.innerHTML = "";
+        chartModalLegend.setAttribute('aria-hidden', 'true');
+      }
+
+      const clonedData = typeof structuredClone === "function"
+        ? structuredClone(sourceChart.data)
+        : JSON.parse(JSON.stringify(sourceChart.data));
+
+      const sourceOptions = sourceChart.config && sourceChart.config.options ? sourceChart.config.options : {};
+      const clonedOptions = {
+        ...sourceOptions,
+        responsive: false,
+        maintainAspectRatio: false,
+        animation: false,
+        layout: {
+          ...(sourceOptions.layout ? sourceOptions.layout : {}),
+          padding: { top: 30, right: 24, bottom: 24, left: 24 }
+        }
+      };
+
+      const isPieLike = sourceChart.config && (sourceChart.config.type === "pie" || sourceChart.config.type === "doughnut");
+
+      const buildPieLegend = () => {
+        if (!isPieLike || !chartModalLegend) return;
+
+        const dataset = clonedData.datasets && clonedData.datasets[0] ? clonedData.datasets[0] : {};
+        const labels = clonedData.labels || [];
+        const values = dataset.data || [];
+        const colors = dataset.backgroundColor || [];
+        const total = values.reduce((sum, value) => sum + (Number(value) || 0), 0);
+
+        chartModalLegend.innerHTML = "";
+        labels.forEach((label, index) => {
+          const item = document.createElement("div");
+          item.className = "legend-item";
+          item.innerHTML = `<span><span class="dot" style="background:${colors[index] || '#2563eb'}"></span>${escapeHtml(String(label))}</span><strong>${formatNumber(values[index] || 0)} · ${formatPercent(total ? (Number(values[index]) || 0) / total * 100 : 0)}</strong>`;
+
+          item.addEventListener("mouseenter", () => {
+            if (!state.modalChart) return;
+            const active = [{ datasetIndex: 0, index: index }];
+            state.modalChart.setActiveElements(active);
+            if (state.modalChart.tooltip && typeof state.modalChart.tooltip.setActiveElements === "function") {
+              const rect = state.modalChart.canvas.getBoundingClientRect();
+              state.modalChart.tooltip.setActiveElements(active, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+            }
+            state.modalChart.update();
+          });
+
+          item.addEventListener("mouseleave", () => {
+            if (!state.modalChart) return;
+            state.modalChart.setActiveElements([]);
+            if (state.modalChart.tooltip && typeof state.modalChart.tooltip.setActiveElements === "function") {
+              state.modalChart.tooltip.setActiveElements([], { x: 0, y: 0 });
+            }
+            state.modalChart.update();
+          });
+
+          chartModalLegend.appendChild(item);
+        });
+
+        chartModalLegend.setAttribute("aria-hidden", "false");
+      };
+
+      chartModalSlot.getBoundingClientRect();
+      chartModalCanvas.getBoundingClientRect();
+
+      const renderModalChart = () => {
+        if (state.modalChart) {
+          state.modalChart.destroy();
+          state.modalChart = null;
+        }
+
+        const rect = chartModalSlot.getBoundingClientRect();
+        const pixelRatio = window.devicePixelRatio || 1;
+        const width = Math.max(640, Math.floor(rect.width));
+        const height = Math.max(420, Math.floor(rect.height));
+
+        chartModalCanvas.style.width = width + "px";
+        chartModalCanvas.style.height = height + "px";
+        chartModalCanvas.width = Math.max(1, Math.floor(width * pixelRatio));
+        chartModalCanvas.height = Math.max(1, Math.floor(height * pixelRatio));
+
+        state.modalChart = new Chart(chartModalCanvas.getContext("2d"), {
+          type: sourceChart.config.type,
+          data: clonedData,
+          options: clonedOptions,
+          plugins: sourceChart.config.plugins || []
+        });
+
+        buildPieLegend();
+      };
+
+      renderModalChart();
+    }
+
+    function closeChartModal() {
+      if (state.modalFrame) {
+        clearTimeout(state.modalFrame);
+        state.modalFrame = null;
+      }
+
+      if (chartModalLegend) {
+        chartModalLegend.innerHTML = '';
+        chartModalLegend.setAttribute('aria-hidden', 'true');
+      }
+
+      chartModal.hidden = true;
+      chartModal.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("modal-open");
+      if (state.modalChart) {
+        state.modalChart.destroy();
+        state.modalChart = null;
+      }
+    }
+
+    // Setup modal event listeners
+    if (chartModalClose) chartModalClose.addEventListener('click', closeChartModal);
+    if (chartModalBackdrop) chartModalBackdrop.addEventListener('click', closeChartModal);
+    if (tableModalClose) tableModalClose.addEventListener('click', closeTableModal);
+    if (tableModalBackdrop) tableModalBackdrop.addEventListener('click', closeTableModal);
+    
+    if (guideBtn) guideBtn.addEventListener('click', openGuideModal);
+    if (guideModalClose) guideModalClose.addEventListener('click', closeGuideModal);
+    if (guideModalBackdrop) guideModalBackdrop.addEventListener('click', closeGuideModal);
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeChartModal();
+        closeTableModal();
+        closeGuideModal();
+      }
+    });
+  </script>
+</body>
+</html>

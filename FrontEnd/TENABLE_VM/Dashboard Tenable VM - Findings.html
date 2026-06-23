@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Dinâmico - Tenable One</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --bg-primary: #07111f;
+      --bg-secondary: #0d1b2e;
+      --bg-card: rgba(15, 27, 46, 0.92);
+      --bg-card-soft: rgba(20, 37, 62, 0.9);
+      --card: rgba(15, 27, 46, 0.92);
+      --muted-card: rgba(20, 37, 62, 0.9);
+      --text: #e5edf7;
+      --muted: #8fa4bd;
+      --line: rgba(148, 163, 184, 0.18);
+      --accent: #22d3ee;
+      --accent-2: #8b5cf6;
+      --critical: #dc2626;
+      --high: #f97316;
+      --medium: #facc15;
+      --low: #22c55e;
+      --unknown: #94a3b8;
+      --radius: 18px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+      --chart-bg: rgba(15, 27, 46, 0.95);
+      --chart-line: rgba(148, 163, 184, 0.18);
+      --chart-shadow: 0 14px 36px rgba(0, 0, 0, 0.25);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(34, 211, 238, 0.18), transparent 34%),
+        radial-gradient(circle at top right, rgba(139, 92, 246, 0.16), transparent 30%),
+        linear-gradient(135deg, var(--bg-primary), #101827 58%, #06101e);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* --- MENU SUPERIOR (TOP NAV) PROFISSIONAL --- */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      width: 100%;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: rgba(11, 20, 36, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .nav-left { display: flex; align-items: center; flex: 1; }
+    .nav-center { display: flex; align-items: center; justify-content: center; }
+    .nav-right { display: flex; align-items: center; justify-content: flex-end; flex: 1; }
+
+    .nav-logo { display: flex; align-items: center; text-decoration: none; }
+    .nav-logo img { height: 42px; width: auto; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(34, 211, 238, 0.15)); }
+
+    .nav-menu { display: flex; height: 76px; gap: 6px; }
+    .nav-item {
+      position: relative; display: flex; align-items: center; gap: 8px; padding: 0 14px;
+      color: #94a3b8; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      cursor: pointer; transition: color 0.2s, background 0.2s;
+    }
+    .nav-icon { display: flex; align-items: center; justify-content: center; }
+
+    .nav-item::after {
+      content: ""; position: absolute; bottom: 0; left: 16px; right: 16px; height: 3px;
+      background: var(--accent); border-radius: 4px 4px 0 0; opacity: 0; transition: 0.2s;
+    }
+    .nav-item:hover, .nav-item.active { color: #fff; background: rgba(255, 255, 255, 0.03); }
+    .nav-item:hover::after, .nav-item.active::after { opacity: 1; }
+
+    .dropdown-menu {
+      position: absolute; top: 100%; left: 0; min-width: 200px;
+      background: rgba(15, 27, 46, 0.98); border: 1px solid rgba(148, 163, 184, 0.18); border-top: none;
+      border-radius: 0 0 14px 14px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35); padding: 8px; display: flex;
+      flex-direction: column; gap: 4px; opacity: 0; visibility: hidden; transform: translateY(10px);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .dropdown-menu::before {
+      content: ""; position: absolute; top: -1px; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+    .nav-item:hover .dropdown-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+
+    .dropdown-item {
+      padding: 10px 14px; color: #cbd5e1; text-decoration: none; font-size: 13px; font-weight: 600;
+      border-radius: 8px; text-transform: none; letter-spacing: normal; transition: all 0.15s ease; white-space: nowrap;
+    }
+    .dropdown-item:hover, .dropdown-item.active { background: rgba(34, 211, 238, 0.12); color: var(--accent); }
+
+    .home-btn {
+      display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.2); background: rgba(15, 23, 42, 0.4); transition: all 0.2s ease;
+      text-decoration: none; --pld-icon-strokeWidth: 1.5;
+    }
+    .home-btn svg { width: 18px; height: 18px; }
+    .home-btn:hover {
+      color: #fff; border-color: var(--accent); background: rgba(34, 211, 238, 0.1);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2); transform: translateY(-1px);
+    }
+    /* ------------------------------------------- */
+
+    .app-shell { width: 100%; margin: 0; display: flex; flex-direction: column; flex: 1; }
+
+    /* Layout Conteúdo Base */
+    .page { width: 100%; max-width: 1480px; margin: 0 auto; padding: 30px 24px; }
+    
+    .hero {
+      position: relative; overflow: hidden; padding: 30px; border: 1px solid var(--line); border-radius: 28px;
+      background: linear-gradient(135deg, rgba(15, 27, 46, 0.96), rgba(13, 27, 46, 0.76)), linear-gradient(90deg, rgba(34, 211, 238, 0.12), rgba(139, 92, 246, 0.12));
+      box-shadow: var(--shadow); margin-bottom: 20px;
+    }
+    .hero::before {
+      content: ""; position: absolute; inset: -60px -90px auto auto; width: 260px; height: 260px;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.28), transparent 68%); filter: blur(2px);
+    }
+    .hero-content { position: relative; display: flex; align-items: center; justify-content: space-between; }
+    .hero-left { width: 50%; }
+
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 12px; border-radius: 999px;
+      border: 1px solid rgba(34, 211, 238, 0.26); background: rgba(34, 211, 238, 0.09); color: #b6f1ff; font-size: 12px;
+      font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    h1 { margin: 0; max-width: 980px; font-size: clamp(30px, 4vw, 36px); line-height: 1.04; letter-spacing: -0.045em; color: #fff; }
+    .subtitle { margin: 14px 0 0; max-width: 920px; color: var(--muted); font-size: 16px; line-height: 1.55; }
+    
+    .meta-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .meta-chip { padding: 9px 12px; border: 1px solid var(--line); border-radius: 999px; color: #cbd5e1; background: rgba(15, 23, 42, 0.42); font-size: 12px; }
+
+    .upload-card, .upload-panel {
+      border: 1px dashed rgba(34, 211, 238, 0.38); border-radius: 24px;
+      background: linear-gradient(180deg, rgba(20, 37, 62, 0.92), rgba(15, 27, 46, 0.86));
+      padding: 20px; display: flex; flex-direction: column; gap: 14px; min-height: 230px; height: 250px; width: 450px; justify-content: center; transition: all 0.18s ease;
+    }
+    .upload-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .upload-copy { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .upload-title { margin: 0; font-size: 18px; font-weight: 800; color: #fff; }
+    .upload-hint { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .upload-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; justify-content: flex-end; }
+    .file-input-wrap { position: relative; display: inline-flex; width: fit-content; }
+    .file-input-wrap input { display: none; }
+    
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 14px; padding: 12px 16px;
+      color: #06101e; background: linear-gradient(135deg, var(--accent), #60a5fa); font-weight: 800; cursor: pointer; box-shadow: 0 12px 30px rgba(34, 211, 238, 0.22); transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 14px 34px rgba(34, 211, 238, 0.3); }
+
+    .btn-outline {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 12px; padding: 11px 16px;
+      color: #e5edf7; background: rgba(15, 23, 42, 0.4); font-weight: 700; font-size: 13.5px; cursor: pointer; transition: all 0.2s ease;
+    }
+    .btn-outline:hover { background: rgba(255, 255, 255, 0.05); border-color: rgba(148, 163, 184, 0.5); transform: translateY(-1px); }
+
+    .status {
+      min-height: 22px; margin-top: 0; padding: 10px 12px; border-radius: 12px; background: rgba(148, 163, 184, 0.1);
+      color: #cbd5e1; font-size: 13px; line-height: 1.45;
+    }
+    .status.ok { color: #86efac; background: rgba(34, 197, 94, 0.12); }
+    .status.warn { color: #fde68a; background: rgba(245, 158, 11, 0.14); }
+    .status.err { color: #fca5a5; background: rgba(239, 68, 68, 0.13); }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; margin: 0 0 20px; }
+    .kpi {
+      position: relative; overflow: hidden; min-height: 150px; padding: 18px; border: 1px solid var(--line); border-radius: 22px;
+      background: var(--bg-card); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2);
+    }
+    .kpi::after {
+      content: ""; position: absolute; right: -50px; top: -70px; width: 150px; height: 150px; border-radius: 999px;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.18), transparent 70%);
+    }
+    .kpi .label { position: relative; margin: 0; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.055em; font-weight: 800; }
+    .kpi .value { position: relative; margin: 14px 0 4px; color: #ffffff; font-size: clamp(28px, 3vw, 42px); line-height: 1; font-weight: 900; letter-spacing: -0.04em; word-break: break-word; }
+    .kpi .note { position: relative; color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+    .info-panel { padding: 18px 20px; margin-bottom: 20px; background: var(--bg-card); border-radius: 22px; border: 1px solid var(--line); }
+    .info-panel h3 { margin: 0 0 12px; font-size: 16px; color: #fff; }
+    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .info-item { padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-card-soft); color: #cbd5e1; font-size: 13px; line-height: 1.45; }
+    .info-item strong { display: block; color: #ffffff; margin-bottom: 5px; }
+
+    .charts-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .charts-grid[hidden] { display: none !important; }
+
+    .empty-state { padding: 30px; border: 1px solid var(--line); border-radius: 22px; background: var(--bg-card); color: var(--muted); text-align: center; }
+    
+    .card {
+      position: relative; overflow: hidden; background: var(--bg-card); padding: 20px; min-height: 460px; display: flex; flex-direction: column;
+      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.2); transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; border: 1px solid var(--line); border-radius: 22px;
+    }
+    .card::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 5px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28); border-color: rgba(34, 211, 238, 0.24); }
+
+    .card-header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    .card h3 { margin: 0; font-size: 17px; letter-spacing: -0.02em; color: #fff; }
+    .card p { margin: 5px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+    .badge { white-space: nowrap; border: 1px solid rgba(34, 211, 238, 0.22); background: rgba(34, 211, 238, 0.09); color: #b6f1ff; padding: 7px 11px; border-radius: 999px; font-size: 12px; font-weight: 800; box-shadow: 0 6px 18px rgba(34, 211, 238, 0.08); }
+
+    .chart-wrap {
+      position: relative; width: 100%; height: 335px; flex: 1; min-height: 315px; padding: 14px; border: 1px solid var(--line); border-radius: 16px;
+      background: radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 30%), linear-gradient(180deg, rgba(15, 27, 46, 0.98) 0%, var(--chart-bg) 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); cursor: zoom-in;
+    }
+    .chart-wrap::after {
+      content: ""; position: absolute; inset: 14px; pointer-events: none; border-radius: 12px;
+      background-image: linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+      background-size: 28px 28px; mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.08));
+    }
+    .matrix-card .chart-wrap { height: 470px; min-height: 440px; background: radial-gradient(circle at top right, rgba(220, 38, 38, 0.08), transparent 32%), linear-gradient(180deg, rgba(15, 27, 46, 0.98) 0%, rgba(10, 18, 31, 0.98) 100%); }
+
+    canvas { position: relative; z-index: 1; width: 100% !important; height: 100% !important; }
+
+    .matrix-criteria { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+    .criteria-box { padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(180deg, rgba(20, 37, 62, 0.95), rgba(15, 27, 46, 0.95)); color: var(--muted); font-size: 12px; line-height: 1.45; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); }
+    .criteria-box strong { display: block; margin-bottom: 6px; color: #ffffff; }
+
+    /* Modais */
+    .table-modal[hidden] { display: none !important; }
+    .table-modal { position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .table-modal-backdrop { position: absolute; inset: 0; background: rgba(2, 6, 23, 0.72); backdrop-filter: blur(10px); }
+    .guide-modal-dialog { position: relative; width: min(700px, 100%); background: linear-gradient(180deg, rgba(15, 27, 46, 0.98), rgba(8, 15, 28, 0.98)); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 18px 55px rgba(0, 0, 0, 0.38); padding: 28px; display: flex; flex-direction: column; gap: 16px; z-index: 10002; }
+    .table-modal-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .table-modal-title { margin: 0; font-size: 20px; font-weight: 850; color: #fff; }
+    .btn-icon-close { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: none; background: transparent; color: #94a3b8; font-size: 20px; cursor: pointer; border-radius: 8px; transition: 0.2s; }
+    .btn-icon-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+    .guide-content { color: #94a3b8; font-size: 14.5px; line-height: 1.65; }
+    .guide-content strong { color: #e5edf7; }
+    .guide-content ol { padding-left: 20px; margin-top: 18px; margin-bottom: 24px; }
+    .guide-content li { margin-bottom: 14px; }
+    .guide-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; background: rgba(15, 23, 42, 0.5); padding: 18px 24px; border-radius: 14px; border: 1px solid rgba(148, 163, 184, 0.16); }
+    .guide-columns code { color: #38bdf8; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13.5px; }
+    .guide-columns code::before { content: "○"; margin-right: 8px; font-size: 10px; color: #38bdf8; vertical-align: middle; }
+    body.modal-open { overflow: hidden; }
+
+    #chartModal { display: none; position: fixed; inset: 0; z-index: 9999; align-items: center; justify-content: center; }
+    #chartModalBackdrop { position: absolute; inset: 0; background: rgba(2, 6, 23, 0.6); backdrop-filter: blur(4px); }
+    #chartModalDialog { position: relative; z-index: 2; width: min(92vw, 1120px); max-height: 86vh; background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: 0 30px 80px rgba(2, 6, 23, 0.6); display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+    #chartModalHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    #chartModalTitle { font-weight: 800; font-size: 16px; margin: 0; color: #fff; }
+    #chartModalSubtitle { color: var(--muted); font-size: 13px; margin: 0; }
+    #chartModalCanvas { width: 100%; display: block; border-radius: 8px; flex: 1 1 auto; min-height: 220px; }
+    #chartModalLegend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .chartModal-close { background: transparent; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; background: rgba(255, 255, 255, 0.04); color: #fff; cursor: pointer; font-weight: 800; transition: all 0.2s ease; }
+    .chartModal-close:hover { background: rgba(255, 255, 255, 0.1); }
+
+    @media (max-width: 1100px) {
+      .top-nav { padding: 0 16px; overflow-x: auto; gap: 24px; justify-content: flex-start;}
+      .nav-left { flex: 0 0 auto; }
+      .nav-center { flex: 1 0 auto; }
+      .nav-right { flex: 0 0 auto; margin-left: auto; }
+      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+      .hero, .charts-grid, .hero-content, .info-grid { grid-template-columns: 1fr; }
+      .hero-left { width: 100%; }
+      .upload-panel { width: 100%; }
+    }
+    @media (max-width: 720px) {
+      .page { width: min(100% - 24px, 1480px); padding-top: 16px; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .matrix-criteria { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  
+  <header class="top-nav">
+    <div class="nav-left">
+      <a href="../../index.html" class="nav-logo">
+        <img src="../images/logo-shield-header.png" alt="Logo Shield" />
+      </a>
+    </div>
+
+    <div class="nav-center">
+      <nav class="nav-menu">
+        
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M14.502 5.999a2.5 2.5 0 1 1 0-3.997M11 2.5H3a1.5 1.5 0 1 0 0 3h8M1.85 5l3.983 5.586M8.694 9.43 5.891 5.5M8 11.995v.01m-2.5-.174a2.5 2.5 0 0 1 5 0v.669c0 1 1 .96 1.042 2H4.505c-.005-1.04.995-1 .995-2v-.67Z"></path>
+            </svg>
+          </span>
+          Oerational Technology
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M9.99218 7.5252C8.75122 9.81068 6.96624 11.9042 5.46441 12.9372M11.417 3.67499C11.3199 4.2481 11.1565 4.84053 10.9407 5.43752M9.69429 5.66581C8.7959 4.86934 7.7354 4.19381 6.50999 3.73915M13.1917 11.1995C12.8465 9.98727 12.2006 8.61567 11.2464 7.35127M3.55783 12.7451C2.29138 11.5591 1.5 9.87188 1.5 7.99986C1.5 7.48353 1.5602 6.98127 1.67397 6.4997M12.403 12.7815C11.2451 13.8483 9.69863 14.4999 8 14.4999C7.10254 14.4999 6.24756 14.318 5.46991 13.9891M12.4221 3.2359C13.7003 4.42289 14.5 6.11798 14.5 7.99987C14.5 9.15355 14.1994 10.237 13.6723 11.1763M6.45841 1.68377C6.95257 1.56357 7.46885 1.49986 8 1.49986C8.88689 1.49986 9.7323 1.67749 10.5026 1.9991M4.5 2.99986C4.5 3.82829 3.82843 4.49986 3 4.49986C2.17157 4.49986 1.5 3.82829 1.5 2.99986C1.5 2.17144 2.17157 1.49986 3 1.49986C3.82843 1.49986 4.5 2.17144 4.5 2.99986ZM12.6667 2.53504C12.6667 3.16924 12.1525 3.68336 11.5183 3.68336C10.8841 3.68336 10.37 3.16924 10.37 2.53504C10.37 1.90084 10.8841 1.38672 11.5183 1.38672C12.1525 1.38672 12.6667 1.90084 12.6667 2.53504ZM5.59832 13.4647C5.59832 14.0989 5.0842 14.613 4.45 14.613C3.8158 14.613 3.30168 14.0989 3.30168 13.4647C3.30168 12.8305 3.8158 12.3164 4.45 12.3164C5.0842 12.3164 5.59832 12.8305 5.59832 13.4647ZM14.6 12.3164C14.6 12.9506 14.0859 13.4647 13.4517 13.4647C12.8175 13.4647 12.3034 12.9506 12.3034 12.3164C12.3034 11.6822 12.8175 11.1681 13.4517 11.1681C14.0859 11.1681 14.6 11.6822 14.6 12.3164ZM11.6377 6.49366C11.6377 7.12786 11.1236 7.64198 10.4894 7.64198C9.85518 7.64198 9.34106 7.12786 9.34106 6.49366C9.34106 5.85946 9.85518 5.34534 10.4894 5.34534C11.1236 5.34534 11.6377 5.85946 11.6377 6.49366Z"></path>
+            </svg>
+          </span>
+          Attack Surface Management
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="M15.5 14v1.5h-5v-5h3m-1 2 1 1 2-3m-10-5L4 7l1.5 1.5m1.5 0 1-3m1.52 0L11 7 9.52 8.5m3.98 0V2.498a.998.998 0 0 0-.998-.998H2.498a.998.998 0 0 0-.998.998v8.044c0 .551.447.998.998.998H8.5m-7-8.04h12"></path>
+            </svg>
+          </span>
+          Security Tools
+          <div class="dropdown-menu">
+            <a href="../TENABLE TOOLS/Custom_audit.html" class="dropdown-item">Custom Audit</a>
+          </div>
+        </div>
+
+        <div class="nav-item active">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="m9.5 9.5 2-2-2-.98 1.97-1.99L9.5 3.5l1.643-1.643L8 1 2.5 2.5v7.031c0 2.969 2.934 4.686 5.398 5.727.065.028.139.028.204 0C10.566 14.218 13.5 12.5 13.5 9.53V2.5"></path>
+            </svg>
+          </span>
+          Vulnerability Management
+          <div class="dropdown-menu">
+            <a href="dashboard_agentes_tenable_vm.html" class="dropdown-item active">Agentes</a>
+            <a href="dashboard_gestao_ativos_tenable_vm.html" class="dropdown-item">Ativos</a>
+            <a href="Dashboard de Compliance de Host Audit.html" class="dropdown-item">Compliance</a>
+            <a href="Dashboard Tenable VM - Findings.html" class="dropdown-item">Findings</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M9.99218 7.5252C8.75122 9.81068 6.96624 11.9042 5.46441 12.9372M11.417 3.67499C11.3199 4.2481 11.1565 4.84053 10.9407 5.43752M9.69429 5.66581C8.7959 4.86934 7.7354 4.19381 6.50999 3.73915M13.1917 11.1995C12.8465 9.98727 12.2006 8.61567 11.2464 7.35127M3.55783 12.7451C2.29138 11.5591 1.5 9.87188 1.5 7.99986C1.5 7.48353 1.5602 6.98127 1.67397 6.4997M12.403 12.7815C11.2451 13.8483 9.69863 14.4999 8 14.4999C7.10254 14.4999 6.24756 14.318 5.46991 13.9891M12.4221 3.2359C13.7003 4.42289 14.5 6.11798 14.5 7.99987C14.5 9.15355 14.1994 10.237 13.6723 11.1763M6.45841 1.68377C6.95257 1.56357 7.46885 1.49986 8 1.49986C8.88689 1.49986 9.7323 1.67749 10.5026 1.9991M4.5 2.99986C4.5 3.82829 3.82843 4.49986 3 4.49986C2.17157 4.49986 1.5 3.82829 1.5 2.99986C1.5 2.17144 2.17157 1.49986 3 1.49986C3.82843 1.49986 4.5 2.17144 4.5 2.99986ZM12.6667 2.53504C12.6667 3.16924 12.1525 3.68336 11.5183 3.68336C10.8841 3.68336 10.37 3.16924 10.37 2.53504C10.37 1.90084 10.8841 1.38672 11.5183 1.38672C12.1525 1.38672 12.6667 1.90084 12.6667 2.53504ZM5.59832 13.4647C5.59832 14.0989 5.0842 14.613 4.45 14.613C3.8158 14.613 3.30168 14.0989 3.30168 13.4647C3.30168 12.8305 3.8158 12.3164 4.45 12.3164C5.0842 12.3164 5.59832 12.8305 5.59832 13.4647ZM14.6 12.3164C14.6 12.9506 14.0859 13.4647 13.4517 13.4647C12.8175 13.4647 12.3034 12.9506 12.3034 12.3164C12.3034 11.6822 12.8175 11.1681 13.4517 11.1681C14.0859 11.1681 14.6 11.6822 14.6 12.3164ZM11.6377 6.49366C11.6377 7.12786 11.1236 7.64198 10.4894 7.64198C9.85518 7.64198 9.34106 7.12786 9.34106 6.49366C9.34106 5.85946 9.85518 5.34534 10.4894 5.34534C11.1236 5.34534 11.6377 5.85946 11.6377 6.49366Z"></path>
+            </svg>
+          </span>
+          Web Application
+          <div class="dropdown-menu">
+            <a href="../TENABLE WAS/Was_app.html" class="dropdown-item">Aplicações</a>
+            <a href="../TENABLE WAS/Was_Vulnerabilidades.html" class="dropdown-item">Vulnerabilidades</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linejoin="round" stroke-miterlimit="10" d="M11.228 13.518c2.668 0 3.36-1.786 3.36-3.048 0-1.643-1.166-2.458-2.04-2.67a2.102 2.102 0 0 0-1.728-3.296c-.474 0-.907.162-1.26.427-.78-1.733-1.995-2.425-3.583-2.425-2.196 0-3.975 1.922-3.975 4.117 0 .754.222 1.452.587 2.053a2.676 2.676 0 0 0-1.07 2.134 2.69 2.69 0 0 0 2.69 2.69l7.02.018Z"></path>
+            </svg>
+          </span>
+          CLoud Security
+          <div class="dropdown-menu">
+            <a href="../TENABLE CS/CS_Findings.html" class="dropdown-item">Findings</a>
+            <a href="../TENABLE CS/CS_Vulnerabilidades.html" class="dropdown-item">Vulnerabilidades</a>
+            <a href="" class="dropdown-item">Inventário</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="M4.105 12.82v-.68a2.612 2.612 0 0 1 2.612-2.612h2.612a2.612 2.612 0 0 1 2.612 2.612v.567M2.5 2.5 8 1l5.5 1.5v7.03c0 2.97-2.934 4.688-5.398 5.728a.263.263 0 0 1-.204 0C5.434 14.218 2.5 12.5 2.5 9.531V2.5Zm7.508 2.997a2.008 2.008 0 1 1-4.016 0 2.008 2.008 0 0 1 4.016 0Z"></path>
+            </svg>
+          </span>
+          Identity Exposure
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="m1.639 6.813 1.445 5.396a1 1 0 0 0 .707.707l5.396 1.445a1 1 0 0 0 .966-.258l3.95-3.95a1 1 0 0 0 .258-.966L12.916 3.79a1 1 0 0 0-.707-.707L6.813 1.64a1 1 0 0 0-.966.258l-3.95 3.95a1 1 0 0 0-.258.966Z"></path>
+            </svg>
+          </span>
+          Exposure Management
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Exposure Cards</a>
+          </div>
+        </div>
+      </nav>
+    </div>
+
+    <div class="nav-right">
+      <a href="../../index.html" class="home-btn" aria-label="Voltar para a Home">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 16 16" fill="none" style="display: block; stroke-width: var(--pld-icon-strokeWidth);" aria-label="IconApps">
+          <path d="M4 4.5H2C1.72386 4.5 1.5 4.27614 1.5 4V2C1.5 1.72386 1.72386 1.5 2 1.5H4C4.27614 1.5 4.5 1.72386 4.5 2V4C4.5 4.27614 4.27614 4.5 4 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 4.5H7C6.72386 4.5 6.5 4.27614 6.5 4V2C6.5 1.72386 6.72386 1.5 7 1.5H9C9.27614 1.5 9.5 1.72386 9.5 2V4C9.5 4.27614 9.27614 4.5 9 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 4.5H12C11.7239 4.5 11.5 4.27614 11.5 4V2C11.5 1.72386 11.7239 1.5 12 1.5H14C14.2761 1.5 14.5 1.72386 14.5 2V4C14.5 4.27614 14.2761 4.5 14 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M4 9.5H2C1.72386 9.5 1.5 9.27614 1.5 9V7C1.5 6.72386 1.72386 6.5 2 6.5H4C4.27614 6.5 4.5 6.72386 4.5 7V9C4.5 9.27614 4.27614 9.5 4 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 9.5H7C6.72386 9.5 6.5 9.27614 6.5 9V7C6.5 6.72386 6.72386 6.5 7 6.5H9C9.27614 6.5 9.5 6.72386 9.5 7V9C9.5 9.27614 9.27614 9.5 9 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 9.5H12C11.7239 9.5 11.5 9.27614 11.5 9V7C11.5 6.72386 11.7239 6.5 12 6.5H14C14.2761 6.5 14.5 6.72386 14.5 7V9C14.5 9.27614 14.2761 9.5 14 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M4 14.5H2C1.72386 14.5 1.5 14.2761 1.5 14V12C1.5 11.7239 1.72386 11.5 2 11.5H4C4.27614 11.5 4.5 11.7239 4.5 12V14C4.5 14.2761 4.27614 14.5 4 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 14.5H7C6.72386 14.5 6.5 14.2761 6.5 14V12C6.5 11.7239 6.72386 11.5 7 11.5H9C9.27614 11.5 9.5 11.7239 9.5 12V14C9.5 14.2761 9.27614 14.5 9 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 14.5H12C11.7239 14.5 11.5 14.2761 11.5 14V12C11.5 11.7239 11.7239 11.5 12 11.5H14C14.2761 11.5 14.5 11.7239 14.5 12V14C14.5 14.2761 14.2761 14.5 14 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  
+  <div class="app-shell">
+    <main class="page">
+      <section class="hero">
+        <div class="hero-content">
+          <div class="hero-left">
+            <div class="eyebrow">Tenable Vulnerability Management · Findings Report</div>
+            <h1 class="h1-title">Dashboard Dinâmico de Vulnerabilidades</h1>
+            <p class="subtitle">
+              Importe a base exportada do Tenable.one (CSV/Excel) para gerar os indicadores e gráficos de
+              vulnerabilidades por mês, severidade, VPR, EPSS, sistema operacional, EoL, patch publicado e
+              correções por configuração.
+            </p>
+            <div class="meta-strip">
+              <span class="meta-chip">Base: ACTIVE, NEW e RESURFACED</span>
+              <span class="meta-chip">Mês: first_observed até last_seen</span>
+              <span class="meta-chip">Patch x Configuração</span>
+              <span class="meta-chip">Gráficos gerados no navegador</span>
+            </div>
+          </div>
+          <div class="upload-panel">
+            <div class="upload-row">
+              <div class="upload-copy">
+                <p class="upload-title">Importar Arquivo de Findings</p>
+                <p class="upload-hint">
+                  Arraste o arquivo para esta área ou selecione um arquivo .csv, .xlsx ou .xls exportado.
+                </p>
+              </div>
+              <div class="upload-actions">
+                <div class="file-input-wrap">
+                  <button id="pickFileBtn" class="btn" type="button">Selecionar Arquivo</button>
+                  <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" />
+                </div>
+                <button id="guideBtn" class="btn-outline" type="button">💡 Como Exportar</button>
+              </div>
+            </div>
+            <div id="statusMessage" class="status">Aguardando importação do arquivo.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="emptyState" class="section">
+        <div class="empty-state">
+          Importe um arquivo CSV ou Excel para gerar os indicadores e gráficos automaticamente.
+        </div>
+      </section>
+
+      <section id="resultsPanel" hidden>
+        <section class="kpi-grid" aria-label="Principais indicadores do dashboard">
+          <div class="kpi">
+            <div class="label">Registros lidos</div>
+            <div id="kpiTotal" class="value">0</div>
+            <div class="note">Total de linhas válidas importadas</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Vulnerabilidades ativas</div>
+            <div id="kpiActionable" class="value">0</div>
+            <div class="note">ACTIVE, NEW e RESURFACED</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Críticas</div>
+            <div id="kpiCritical" class="value">0</div>
+            <div class="note">Severidade crítica nos status filtrados</div>
+          </div>
+          <div class="kpi">
+            <div class="label">EoL</div>
+            <div id="kpiEol" class="value">0</div>
+            <div class="note">Ocorrências relacionadas a fim de vida</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Patch publicado</div>
+            <div id="kpiPatchPublished" class="value">0</div>
+            <div class="note">definition.patch_published preenchido</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Sem patch</div>
+            <div id="kpiConfig" class="value">0</div>
+            <div class="note">Base para correção por configuração</div>
+          </div>
+        </section>
+
+        <section class="info-panel">
+          <h3>Critérios de cálculo aplicados</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <strong>Status considerados</strong>
+              Gráfico mensal usa ACTIVE, FIXED, NEW e RESURFACED. Os demais gráficos filtrados usam
+              ACTIVE, NEW e RESURFACED.
+            </div>
+            <div class="info-item">
+              <strong>Período mensal</strong>
+              A distribuição mensal considera a presença da vulnerabilidade no intervalo entre
+              first_observed e last_seen durante 2026.
+            </div>
+            <div class="info-item">
+              <strong>Patch x Configuração</strong>
+              Security Update x Third Party considera somente registros com definition.patch_published
+              preenchido; configuração usa registros sem patch publicado.
+            </div>
+          </div>
+        </section>
+
+        <section class="charts-grid" id="chartsGrid" hidden>
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Vulnerabilidades por Mês</h3>
+                <p>Total consolidado por mês em 2026, usando first_observed até last_seen e status
+                  ACTIVE, FIXED, NEW e RESURFACED.</p>
+              </div>
+              <span class="badge">Coluna</span>
+            </div>
+            <div class="chart-wrap"><canvas id="monthly"></canvas></div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Top 10 Vulnerabilidades por Versão de Sistema Operacional</h3>
+                <p>Ranking das versões de sistema operacional com mais vulnerabilidades ACTIVE, NEW e RESURFACED.</p>
+              </div>
+              <span class="badge">Barra</span>
+            </div>
+            <div class="chart-wrap"><canvas id="os"></canvas></div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Vulnerabilidades por Severidade</h3>
+                <p>Distribuição por severidade considerando vulnerabilidades ACTIVE, NEW e RESURFACED.</p>
+              </div>
+              <span class="badge">Pizza</span>
+            </div>
+            <div class="chart-wrap"><canvas id="severity"></canvas></div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Vulnerabilidades por VPR</h3>
+                <p>Agrupamento por classificação VPR, orientado de crítico para baixo.</p>
+              </div>
+              <span class="badge">Coluna</span>
+            </div>
+            <div class="chart-wrap"><canvas id="vpr"></canvas></div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Vulnerabilidades EoL por severidade</h3>
+                <p>Vulnerabilidades associadas a sistemas ou definições EoL, agrupadas por severidade.</p>
+              </div>
+              <span class="badge">Rosca</span>
+            </div>
+            <div class="chart-wrap"><canvas id="eol"></canvas></div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Vulnerabilidades EoL por Versão de Sistema Operacional</h3>
+                <p>Agrupamento das vulnerabilidades EoL por versão identificada do sistema operacional.</p>
+              </div>
+              <span class="badge">Barra</span>
+            </div>
+            <div class="chart-wrap"><canvas id="eolOs"></canvas></div>
+          </article>
+
+          <article class="card matrix-card">
+            <div class="card-header">
+              <div>
+                <h3>Matriz VPR x EPSS</h3>
+                <p>Células com quantidade de vulnerabilidades ACTIVE, NEW e RESURFACED. O gradiente
+                  aumenta conforme o risco combinado.</p>
+              </div>
+              <span class="badge">Matriz</span>
+            </div>
+            <div class="chart-wrap"><canvas id="matrix"></canvas></div>
+            <div class="matrix-criteria">
+              <div class="criteria-box">
+                <strong>Critério VPR</strong>
+                Crítico (9 - 10), Alto (7 - 8.9), Médio (4 - 6.9), Baixo (0 - 3.9).
+              </div>
+              <div class="criteria-box">
+                <strong>Critério EPSS</strong>
+                Crítico (0.8 - 1.0), Alto (0.5 - 0.79), Médio (0.2 - 0.49), Baixo (0 - 0.19).
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Security Update x Third Party</h3>
+                <p>Somente vulnerabilidades com definition.patch_published preenchido.</p>
+              </div>
+              <span class="badge">Pizza</span>
+            </div>
+            <div class="chart-wrap"><canvas id="patch"></canvas></div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Vulnerabilidades corrigidas por configuração</h3>
+                <p>Agrupamento por severidade para vulnerabilidades sem definition.patch_published
+                  preenchido.</p>
+              </div>
+              <span class="badge">Coluna</span>
+            </div>
+            <div class="chart-wrap"><canvas id="config"></canvas></div>
+          </article>
+        </section>
+      </section>
+
+      <div id="guideModal" class="table-modal" hidden aria-hidden="true">
+        <div id="guideModalBackdrop" class="table-modal-backdrop"></div>
+        <div class="table-modal-dialog guide-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="guideModalTitle">
+          <div class="table-modal-header">
+            <div>
+              <h3 id="guideModalTitle" class="table-modal-title">Guia de Exportação - Tenable One</h3>
+            </div>
+            <button id="guideModalClose" class="btn-icon-close" type="button" aria-label="Fechar">✕</button>
+          </div>
+          <div class="table-modal-body guide-modal-body">
+            <div class="guide-content">
+              <p>Para garantir que o dashboard de <strong>Findings</strong> apresente todas as informações e gráficos corretamente, siga os passos abaixo ao exportar seus dados:</p>
+              <ol>
+                <li>Acesse a plataforma <strong>Tenable One</strong>.</li>
+                <li>Navegue até o menu de Vulnerabilidades (ex: <i>Explore > Findings</i>).</li>
+                <li>Filtre o <strong>State</strong> (Status) para trazer pelo menos <i>ACTIVE, NEW e RESURFACED</i> (e <i>FIXED</i>, se quiser ver a evolução mensal completa).</li>
+                <li>Clique no botão de <strong>Exportar</strong> e selecione o formato <strong>CSV</strong> ou <strong>Excel</strong>.</li>
+                <li>Na janela que se abrir, <strong>garanta que as colunas abaixo</strong> estejam marcadas:</li>
+              </ol>
+              <div class="guide-columns">
+                <div><code>Severity</code></div>
+                <div><code>State</code></div>
+                <div><code>VPR Score</code></div>
+                <div><code>EPSS Score</code></div>
+                <div><code>Asset Operating System</code></div>
+                <div><code>Plugin Name</code></div>
+                <div><code>Solution</code></div>
+                <div><code>Plugin Family</code></div>
+                <div><code>Patch Published</code></div>
+                <div><code>First Observed</code></div>
+                <div><code>Last Seen</code></div>
+              </div>
+              <p style="margin-top: 24px;">6. Clique em exportar, aguarde o download e faça o upload do arquivo gerado aqui no painel.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="chartModal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div id="chartModalBackdrop" tabindex="-1"></div>
+        <div id="chartModalDialog" role="document">
+          <div id="chartModalHeader">
+            <div>
+              <div id="chartModalTitle">Título</div>
+              <div id="chartModalSubtitle">Subtítulo</div>
+            </div>
+            <div>
+              <button id="chartModalClose" class="chartModal-close" aria-label="Fechar">Fechar
+                ✕</button>
+            </div>
+          </div>
+          <canvas id="chartModalCanvas"></canvas>
+          <div id="chartModalLegend" aria-hidden="false"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let charts = {};
+    let currentMatrixPayload = null;
+
+    const TARGET_YEAR = 2026;
+
+    const MONTH_LABELS = [
+      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+
+    const MONTHLY_STATES = ["ACTIVE", "FIXED", "NEW", "RESURFACED"];
+    const ACTIONABLE_STATES = new Set(["ACTIVE", "NEW", "RESURFACED"]);
+
+    const STATE_LABELS = {
+      ACTIVE: "Active",
+      FIXED: "Fixed",
+      NEW: "New",
+      RESURFACED: "Resurfaced"
+    };
+
+    const STATE_COLORS = {
+      ACTIVE: "#2563eb",
+      FIXED: "#16a34a",
+      NEW: "#f59e0b",
+      RESURFACED: "#7c3aed"
+    };
+
+    const SEVERITY_ORDER = ["Crítico", "Alto", "Médio", "Baixo", "Desconhecido"];
+    const RISK_ORDER_DESC = ["Crítico", "Alto", "Médio", "Baixo", "Desconhecido"];
+    const RISK_ORDER_LOW_TO_HIGH = ["Baixo", "Médio", "Alto", "Crítico", "Desconhecido"];
+
+    const SEVERITY_COLORS = {
+      "Crítico": "#dc2626",
+      "Alto": "#f97316",
+      "Médio": "#facc15",
+      "Baixo": "#22c55e",
+      "Desconhecido": "#94a3b8"
+    };
+
+    const AXIS_COLOR = "#e5edf7";
+    const MUTED_AXIS_COLOR = "#8fa4bd";
+    const GRID_COLOR = "rgba(148, 163, 184, 0.18)";
+    const BORDER_GRID_COLOR = "rgba(255, 255, 255, 0.08)";
+
+    Chart.defaults.font.family = "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif";
+    Chart.defaults.color = AXIS_COLOR;
+    Chart.defaults.plugins.tooltip.backgroundColor = "#0f172a";
+    Chart.defaults.plugins.tooltip.titleColor = "#ffffff";
+    Chart.defaults.plugins.tooltip.bodyColor = "#e2e8f0";
+    Chart.defaults.plugins.tooltip.borderColor = "rgba(255,255,255,0.12)";
+    Chart.defaults.plugins.tooltip.borderWidth = 1;
+    Chart.defaults.plugins.tooltip.padding = 12;
+    Chart.defaults.plugins.tooltip.cornerRadius = 12;
+    Chart.defaults.plugins.tooltip.displayColors = true;
+    Chart.defaults.elements.bar.borderRadius = 10;
+    Chart.defaults.elements.bar.borderSkipped = false;
+
+    const valueLabelPlugin = {
+      id: "valueLabelPlugin",
+      afterDatasetsDraw(chart, args, pluginOptions) {
+        const options = pluginOptions || {};
+        const type = chart.config.type;
+        const showFor = ["pie", "doughnut", "bar"];
+        if (!showFor.includes(type)) return;
+
+        const ctx = chart.ctx;
+        const datasets = chart.data.datasets || [];
+
+        ctx.save();
+        ctx.font = options.font || "800 12px Inter, Segoe UI, Roboto, Arial, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        datasets.forEach((dataset, datasetIndex) => {
+          const meta = chart.getDatasetMeta(datasetIndex);
+          const values = (dataset.data || []).map(v => Number(v) || 0);
+          const total = values.reduce((a, b) => a + b, 0);
+
+          meta.data.forEach((element, index) => {
+            const value = values[index];
+            if (!value) return;
+
+            let labelText = formatNumber(value);
+
+            if (options.showPercent) {
+              const percent = total ? ((value / total) * 100).toFixed(1).replace(".", ",") : "0,0";
+              labelText = `${formatNumber(value)} (${percent}%)`;
+            }
+
+            if (type === "bar") {
+              const pos = element.tooltipPosition();
+              const isHorizontal = chart.options.indexAxis === "y";
+              ctx.fillStyle = AXIS_COLOR;
+              ctx.textAlign = isHorizontal ? "left" : "center";
+              const textX = isHorizontal ? Math.min(pos.x + 10, chart.chartArea.right - ctx.measureText(labelText).width) : pos.x;
+              const textY = isHorizontal ? pos.y : Math.max(pos.y - 12, chart.chartArea.top + 10);
+              ctx.fillText(labelText, textX, textY);
+              return;
+            }
+
+            const position = element.tooltipPosition();
+            ctx.fillStyle = options.color || "#111827";
+            ctx.fillText(labelText, position.x, position.y);
+          });
+        });
+
+        ctx.restore();
+      }
+    };
+
+    Chart.register(valueLabelPlugin);
+
+    function setStatus(message, type = "") {
+      const element = document.getElementById("statusMessage");
+      element.textContent = message || "";
+      element.className = `status ${type}`.trim();
+    }
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat("pt-BR").format(Number(value) || 0);
+    }
+
+    function setKpi(id, value) {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = typeof value === "number" ? formatNumber(value) : String(value || "-");
+      }
+    }
+
+    function normalizeText(value) {
+      return String(value || "")
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    }
+
+    function canonicalHeader(value) {
+      return normalizeText(value).replace(/[\s_-]+/g, ".");
+    }
+
+    function isRowEmpty(row) {
+      return !row || row.every(cell => cell === null || cell === undefined || String(cell).trim() === "");
+    }
+
+    function destroyCharts() {
+      Object.values(charts).forEach(chart => {
+        if (chart && typeof chart.destroy === "function") {
+          chart.destroy();
+        }
+      });
+      charts = {};
+    }
+
+    function setResultsVisible(visible) {
+      const emptyState = document.getElementById("emptyState");
+      const resultsPanel = document.getElementById("resultsPanel");
+      const chartsGrid = document.getElementById("chartsGrid");
+
+      if (emptyState) {
+        emptyState.hidden = visible;
+      }
+
+      if (resultsPanel) {
+        resultsPanel.hidden = !visible;
+      }
+
+      if (chartsGrid) {
+        chartsGrid.hidden = !visible;
+      }
+    }
+
+    function requiredColumnMessage(columns) {
+      return `Colunas não encontradas: ${columns.join(", ")}. Verifique se o arquivo exportado mantém os nomes originais do Tenable.one.`;
+    }
+
+    function detectHeaderRow(rows) {
+      return rows.findIndex(row => {
+        if (isRowEmpty(row)) return false;
+        const headers = row.map(canonicalHeader);
+        const hasSeverity = headers.some(h => h.includes("severity"));
+        const hasState = headers.some(h => h === "state" || h.includes("status"));
+        const hasVpr = headers.some(h => h.includes("vpr.score") || h.includes("vpr"));
+        return hasSeverity && hasState && hasVpr;
+      });
+    }
+
+    function rowsToObjects(rows) {
+      const headerIndex = detectHeaderRow(rows);
+
+      if (headerIndex < 0) {
+        throw new Error("Não foi possível localizar a linha de cabeçalho com severity, state e VPR.");
+      }
+
+      const headers = rows[headerIndex].map((h, i) => String(h || `col_${i}`).trim());
+      return rows
+        .slice(headerIndex + 1)
+        .filter(row => !isRowEmpty(row))
+        .map(row => {
+          const item = {};
+          headers.forEach((header, index) => {
+            item[header] = row[index] ?? "";
+          });
+          return item;
+        });
+    }
+
+    function findCol(headers, candidates) {
+      const normalized = headers.map(h => ({ original: h, normalized: canonicalHeader(h) }));
+
+      for (const candidate of candidates) {
+        const target = canonicalHeader(candidate);
+        const exact = normalized.find(h => h.normalized === target);
+        if (exact) return exact.original;
+      }
+
+      for (const candidate of candidates) {
+        const target = canonicalHeader(candidate);
+        const partial = normalized.find(h => h.normalized.includes(target));
+        if (partial) return partial.original;
+      }
+
+      return null;
+    }
+
+    function getColumns(headers) {
+      return {
+        severity: findCol(headers, ["severity"]),
+        state: findCol(headers, ["state", "status"]),
+        vpr: findCol(headers, ["definition.vpr.score", "vpr.score", "vpr"]),
+        epss: findCol(headers, ["definition.epss.score", "epss.score", "epss"]),
+        os: findCol(headers, ["asset.operating_system", "operating_system", "operating system"]),
+        name: findCol(headers, ["definition.name", "name", "plugin.name"]),
+        solution: findCol(headers, ["definition.solution", "solution"]),
+        family: findCol(headers, ["definition.family", "family"]),
+        patchPublished: findCol(headers, ["definition.patch_published", "patch_published", "patch published"]),
+        firstObserved: findCol(headers, ["first_observed", "first observed"]),
+        lastFixed: findCol(headers, ["last_fixed", "last fixed"]),
+        lastSeen: findCol(headers, ["last_seen", "last seen"])
+      };
+    }
+
+    function normalizeStatus(value) {
+      return String(value || "").trim().toUpperCase();
+    }
+
+    function normalizeSeverity(value) {
+      const normalized = normalizeText(value);
+
+      if (["critical", "critico", "critica"].some(k => normalized.includes(k))) return "Crítico";
+      if (["high", "alto", "alta"].some(k => normalized.includes(k))) return "Alto";
+      if (["medium", "medio", "media"].some(k => normalized.includes(k))) return "Médio";
+      if (["low", "baixo", "baixa"].some(k => normalized.includes(k))) return "Baixo";
+
+      return "Desconhecido";
+    }
+
+    function severityColor(label) {
+      return SEVERITY_COLORS[label] || SEVERITY_COLORS["Desconhecido"];
+    }
+
+    function riskWeight(label) {
+      const weights = {
+        "Baixo": 1,
+        "Médio": 2,
+        "Alto": 3,
+        "Crítico": 4
+      };
+
+      return weights[label] || 1;
+    }
+
+    function interpolateHexColor(startHex, endHex, ratio) {
+      const cleanStart = startHex.replace("#", "");
+      const cleanEnd = endHex.replace("#", "");
+
+      const start = [0, 2, 4].map(i => parseInt(cleanStart.slice(i, i + 2), 16));
+      const end = [0, 2, 4].map(i => parseInt(cleanEnd.slice(i, i + 2), 16));
+
+      const color = start.map((startValue, index) => {
+        const value = Math.round(startValue + (end[index] - startValue) * ratio);
+        return value.toString(16).padStart(2, "0");
+      });
+
+      return `#${color.join("")}`;
+    }
+
+    function matrixRiskColor(vprLabel, epssLabel) {
+      const minRisk = 2;
+      const maxRisk = 8;
+      const risk = riskWeight(vprLabel) + riskWeight(epssLabel);
+      const ratio = Math.max(0, Math.min(1, (risk - minRisk) / (maxRisk - minRisk)));
+
+      return interpolateHexColor("#fecaca", "#7f1d1d", ratio);
+    }
+
+    function matrixTextColor(vprLabel, epssLabel) {
+      const risk = riskWeight(vprLabel) + riskWeight(epssLabel);
+      return risk >= 6 ? "#ffffff" : "#0f172a";
+    }
+
+    function parseNumber(value) {
+      if (value === null || value === undefined || value === "") return NaN;
+
+      if (typeof value === "number") {
+        return value;
+      }
+
+      const text = String(value).trim().replace(",", ".");
+      return Number(text);
+    }
+
+    function classifyVPR(value) {
+      const v = parseNumber(value);
+
+      if (isNaN(v)) return "Desconhecido";
+      if (v >= 9) return "Crítico";
+      if (v >= 7) return "Alto";
+      if (v >= 4) return "Médio";
+      return "Baixo";
+    }
+
+    function classifyEPSS(value) {
+      const v = parseNumber(value);
+
+      if (isNaN(v)) return "Desconhecido";
+      if (v >= 0.8) return "Crítico";
+      if (v >= 0.5) return "Alto";
+      if (v >= 0.2) return "Médio";
+      return "Baixo";
+    }
+
+    function parseDate(value) {
+      if (!value && value !== 0) return null;
+
+      if (value instanceof Date && !isNaN(value)) {
+        return value;
+      }
+
+      if (typeof value === "number") {
+        const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+        const parsed = new Date(excelEpoch.getTime() + value * 86400000);
+        return isNaN(parsed) ? null : parsed;
+      }
+
+      const text = String(value).trim();
+      if (!text) return null;
+
+      const parsed = new Date(text);
+      return isNaN(parsed) ? null : parsed;
+    }
+
+    function monthRangeForObservedPeriod(row, columns) {
+      let firstSeen = parseDate(row[columns.firstObserved]);
+      let lastSeen = parseDate(row[columns.lastSeen]);
+
+      if (!firstSeen && !lastSeen) {
+        return [];
+      }
+
+      if (!firstSeen) firstSeen = lastSeen;
+      if (!lastSeen) lastSeen = firstSeen;
+
+      if (firstSeen > lastSeen) {
+        const temp = firstSeen;
+        firstSeen = lastSeen;
+        lastSeen = temp;
+      }
+
+      const months = [];
+
+      for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+        const monthStart = new Date(TARGET_YEAR, monthIndex, 1);
+        const monthEnd = new Date(TARGET_YEAR, monthIndex + 1, 0, 23, 59, 59, 999);
+
+        if (firstSeen <= monthEnd && lastSeen >= monthStart) {
+          months.push(monthIndex);
+        }
+      }
+
+      return months;
+    }
+
+    function createCountObject(keys) {
+      return Object.fromEntries(keys.map(k => [k, 0]));
+    }
+
+    function sortEntriesByValue(object) {
+      return Object.entries(object).sort((a, b) => b[1] - a[1]);
+    }
+
+    function enhanceBarDatasets(datasets) {
+      return datasets.map(dataset => ({
+        borderRadius: 10,
+        borderSkipped: false,
+        barPercentage: 0.72,
+        categoryPercentage: 0.72,
+        ...dataset
+      }));
+    }
+
+    function numericTick(value) {
+      return Number.isFinite(Number(value)) ? formatNumber(value) : value;
+    }
+
+    function buildBarChart(id, labels, datasets, xTitle, yTitle, options = {}) {
+      const ctx = document.getElementById(id);
+      const isHorizontal = options.indexAxis === "y";
+
+      charts[id] = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: enhanceBarDatasets(datasets)
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: options.indexAxis || "x",
+          animation: { duration: 700, easing: "easeOutQuart" },
+          layout: {
+            padding: isHorizontal ? { top: 10, right: 34, bottom: 4, left: 4 } : { top: 28, right: 8, bottom: 4, left: 4 }
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: "bottom",
+              align: "center",
+              labels: {
+                color: AXIS_COLOR,
+                usePointStyle: true,
+                pointStyle: "rectRounded",
+                boxWidth: 10,
+                boxHeight: 10,
+                padding: 18,
+                font: { size: 12, weight: "700" }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label(context) {
+                  const value = context.chart.options.indexAxis === "y" ? context.parsed.x : context.parsed.y;
+                  return `${context.dataset.label}: ${formatNumber(value)}`;
+                }
+              }
+            },
+            valueLabelPlugin: {
+              showPercent: false
+            }
+          },
+          scales: {
+            x: {
+              stacked: !!options.stacked,
+              beginAtZero: isHorizontal,
+              border: { display: false },
+              title: {
+                display: true,
+                text: isHorizontal ? yTitle : xTitle,
+                color: AXIS_COLOR,
+                font: { size: 12, weight: "800" }
+              },
+              ticks: {
+                color: MUTED_AXIS_COLOR,
+                maxRotation: isHorizontal ? 0 : (options.maxRotation ?? 35),
+                minRotation: isHorizontal ? 0 : (options.minRotation ?? 0),
+                autoSkip: isHorizontal ? true : false,
+                precision: 0,
+                callback: numericTick,
+                font: { size: 11, weight: "600" }
+              },
+              grid: {
+                color: isHorizontal ? GRID_COLOR : BORDER_GRID_COLOR,
+                drawTicks: false
+              }
+            },
+            y: {
+              stacked: !!options.stacked,
+              beginAtZero: !isHorizontal,
+              border: { display: false },
+              title: {
+                display: true,
+                text: isHorizontal ? xTitle : yTitle,
+                color: AXIS_COLOR,
+                font: { size: 12, weight: "800" }
+              },
+              ticks: {
+                color: MUTED_AXIS_COLOR,
+                precision: 0,
+                callback: numericTick,
+                font: { size: 11, weight: "600" }
+              },
+              grid: {
+                color: isHorizontal ? BORDER_GRID_COLOR : GRID_COLOR,
+                drawTicks: false
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function buildPieChart(id, labels, values, datasetLabel, options = {}) {
+      const ctx = document.getElementById(id);
+      const total = values.reduce((a, b) => a + b, 0);
+      const type = options.type || "pie";
+
+      charts[id] = new Chart(ctx, {
+        type,
+        data: {
+          labels,
+          datasets: [{
+            label: datasetLabel,
+            data: values,
+            backgroundColor: labels.map(label => options.colorFn ? options.colorFn(label) : "#2563eb"),
+            borderColor: "#ffffff",
+            borderWidth: 3,
+            hoverOffset: 10,
+            spacing: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { animateRotate: true, duration: 800, easing: "easeOutQuart" },
+          layout: { padding: { top: 14, right: 16, bottom: 8, left: 16 } },
+          cutout: type === "doughnut" ? "58%" : undefined,
+          plugins: {
+            legend: {
+              display: true,
+              position: "bottom",
+              labels: {
+                color: AXIS_COLOR,
+                usePointStyle: true,
+                pointStyle: "circle",
+                padding: 18,
+                boxWidth: 10,
+                boxHeight: 10,
+                font: { size: 12, weight: "700" }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label(context) {
+                  const value = Number(context.raw) || 0;
+                  const percent = total ? ((value / total) * 100).toFixed(1).replace(".", ",") : "0,0";
+                  return `${context.label}: ${formatNumber(value)} (${percent}%)`;
+                }
+              }
+            },
+            valueLabelPlugin: {
+              showPercent: !!options.showPercent,
+              color: "#111827"
+            }
+          }
+        }
+      });
+    }
+
+    function roundedRect(ctx, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + width, y, x + width, y + height, r);
+      ctx.arcTo(x + width, y + height, x, y + height, r);
+      ctx.arcTo(x, y + height, x, y, r);
+      ctx.arcTo(x, y, x + width, y, r);
+      ctx.closePath();
+    }
+
+    function drawMatrix(canvasId, rows, cols, matrixData) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext("2d");
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(rect.width, 520);
+      const height = Math.max(rect.height, 440);
+
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+
+      const left = 112;
+      const right = 42;
+      const top = 72;
+      const bottom = 106;
+      const plotWidth = width - left - right;
+      const plotHeight = height - top - bottom;
+      const cellW = plotWidth / cols.length;
+      const cellH = plotHeight / rows.length;
+      const gap = 5;
+
+      const values = [];
+      rows.forEach(row => cols.forEach(col => values.push(matrixData[`${row}|${col}`] || 0)));
+      const maxValue = Math.max(1, ...values);
+
+      const gradient = ctx.createLinearGradient(left, 0, left + plotWidth, 0);
+      gradient.addColorStop(0, "#fecaca");
+      gradient.addColorStop(1, "#7f1d1d");
+      ctx.fillStyle = gradient;
+      roundedRect(ctx, left, 26, 160, 10, 5);
+      ctx.fill();
+      ctx.fillStyle = MUTED_AXIS_COLOR;
+      ctx.font = "700 11px Inter, Segoe UI, Roboto, Arial, sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Baixo risco", left + 172, 31);
+      ctx.textAlign = "right";
+      ctx.fillText("Alto risco", left + plotWidth, 31);
+
+      ctx.fillStyle = AXIS_COLOR;
+      ctx.font = "800 14px Inter, Segoe UI, Roboto, Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("EPSS", left + plotWidth / 2, height - 44);
+
+      ctx.save();
+      ctx.translate(30, top + plotHeight / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText("VPR", 0, 0);
+      ctx.restore();
+
+      ctx.font = "800 12px Inter, Segoe UI, Roboto, Arial, sans-serif";
+      ctx.textBaseline = "middle";
+
+      rows.forEach((rowLabel, rowIndex) => {
+        const y = top + rowIndex * cellH;
+        ctx.textAlign = "right";
+        ctx.fillStyle = severityColor(rowLabel);
+        ctx.fillText(rowLabel, left - 16, y + cellH / 2);
+      });
+
+      cols.forEach((colLabel, colIndex) => {
+        const x = left + colIndex * cellW;
+        ctx.textAlign = "center";
+        ctx.fillStyle = severityColor(colLabel);
+        ctx.fillText(colLabel, x + cellW / 2, top + plotHeight + 25);
+      });
+
+      rows.forEach((rowLabel, rowIndex) => {
+        cols.forEach((colLabel, colIndex) => {
+          const value = matrixData[`${rowLabel}|${colLabel}`] || 0;
+          const x = left + colIndex * cellW;
+          const y = top + rowIndex * cellH;
+          const cellX = x + gap / 2;
+          const cellY = y + gap / 2;
+          const cellWidth = cellW - gap;
+          const cellHeight = cellH - gap;
+
+          ctx.save();
+          ctx.shadowColor = "rgba(15, 23, 42, 0.12)";
+          ctx.shadowBlur = 10;
+          ctx.shadowOffsetY = 5;
+          ctx.fillStyle = matrixRiskColor(rowLabel, colLabel);
+          roundedRect(ctx, cellX, cellY, cellWidth, cellHeight, 12);
+          ctx.fill();
+          ctx.restore();
+
+          roundedRect(ctx, cellX, cellY, cellWidth, cellHeight, 12);
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.88)";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.fillStyle = matrixTextColor(rowLabel, colLabel);
+          ctx.font = "900 20px Inter, Segoe UI, Roboto, Arial, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(formatNumber(value), x + cellW / 2, y + cellH / 2 - 4);
+
+          ctx.font = "700 10px Inter, Segoe UI, Roboto, Arial, sans-serif";
+          ctx.fillStyle = matrixTextColor(rowLabel, colLabel) === "#ffffff" ? "rgba(255,255,255,0.78)" : "rgba(15,23,42,0.56)";
+          ctx.fillText("vulns", x + cellW / 2, y + cellH / 2 + 18);
+        });
+      });
+
+      ctx.strokeStyle = "rgba(15, 23, 42, 0.10)";
+      ctx.lineWidth = 1;
+      roundedRect(ctx, left, top, plotWidth, plotHeight, 14);
+      ctx.stroke();
+
+      ctx.fillStyle = MUTED_AXIS_COLOR;
+      ctx.font = "700 11px Inter, Segoe UI, Roboto, Arial, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Quantidade por célula considerando ACTIVE, NEW e RESURFACED.", left, 52);
+
+      charts[canvasId] = {
+        destroy() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      };
+
+      currentMatrixPayload = { canvasId, rows, cols, matrixData };
+    }
+
+    function normalizeOSVersion(value) {
+      const os = String(value || "").trim();
+      const normalized = normalizeText(os);
+
+      if (!os) return "Desconhecido";
+
+      const windowsServer = os.match(/Windows\s+Server\s+(\d{4})(?:\s+R2)?[^0-9]*(?:Build\s+(\d+))?/i);
+      if (windowsServer) {
+        const version = windowsServer[1];
+        const build = windowsServer[2] ? ` Build ${windowsServer[2]}` : "";
+        return `Windows Server ${version}${build}`;
+      }
+
+      const windowsDesktop = os.match(/Windows\s+(11|10|8\.1|8|7)[^0-9]*(?:Build\s+(\d+))?/i);
+      if (windowsDesktop) {
+        const version = windowsDesktop[1];
+        const build = windowsDesktop[2] ? ` Build ${windowsDesktop[2]}` : "";
+        return `Windows ${version}${build}`;
+      }
+
+      const ubuntu = os.match(/Ubuntu(?:\s+Linux)?\s+([0-9.]+(?:\s+LTS)?)/i);
+      if (ubuntu) return `Ubuntu ${ubuntu[1].trim()}`;
+
+      const debian = os.match(/Debian(?:\s+GNU\/Linux)?\s+([0-9.]+)/i);
+      if (debian) return `Debian ${debian[1]}`;
+
+      const centos = os.match(/CentOS(?:\s+Linux)?\s+([0-9.]+)/i);
+      if (centos) return `CentOS ${centos[1]}`;
+
+      const rhel = os.match(/Red\s+Hat.*?([0-9]+(?:\.[0-9]+)?)/i);
+      if (rhel) return `Red Hat Enterprise Linux ${rhel[1]}`;
+
+      const oracle = os.match(/Oracle\s+Linux\s+([0-9.]+)/i);
+      if (oracle) return `Oracle Linux ${oracle[1]}`;
+
+      const mac = os.match(/macOS\s+([0-9.]+)/i);
+      if (mac) return `macOS ${mac[1]}`;
+
+      if (normalized.includes("linux")) return "Linux - versão não identificada";
+      return os;
+    }
+
+    function isSecurityUpdate(row, columns) {
+      const combined = [
+        row[columns.name],
+        row[columns.solution],
+        row[columns.family]
+      ].map(v => String(v || "").toLowerCase()).join(" ");
+
+      return /security update|security updates|\bkb\d{5,}|microsoft bulletins|cumulative update|monthly rollup/.test(combined);
+    }
+
+    function hasPatchPublished(row, columns) {
+      if (!columns.patchPublished) return false;
+      const value = row[columns.patchPublished];
+      return value !== null && value !== undefined && String(value).trim() !== "";
+    }
+
+    function processData(data, fileName = "-") {
+      destroyCharts();
+
+      if (!data || !data.length) {
+        setResultsVisible(false);
+        setStatus("Nenhum dado encontrado no arquivo importado.", "warn");
+        return;
+      }
+
+      const headers = Object.keys(data[0]);
+      const columns = getColumns(headers);
+      const missingRequired = [];
+
+      ["severity", "state", "vpr", "epss", "os", "name", "solution", "patchPublished", "firstObserved", "lastSeen"].forEach(key => {
+        if (!columns[key]) missingRequired.push(key);
+      });
+
+      if (missingRequired.length) {
+        setResultsVisible(false);
+        setStatus(requiredColumnMessage(missingRequired), "warn");
+        return;
+      }
+
+      setResultsVisible(true);
+
+      const monthly = Array(12).fill(0);
+
+      const severity = createCountObject(SEVERITY_ORDER);
+      const vpr = createCountObject(RISK_ORDER_DESC);
+      const os = {};
+      const eol = createCountObject(SEVERITY_ORDER);
+      const eolOs = {};
+      const config = createCountObject(SEVERITY_ORDER);
+      const matrix = {};
+      const patch = { "Security Update": 0, "Third Party": 0 };
+
+      const eolKeys = [
+        "2008", "2012", "xp", "windows 7", "centos 6", "ubuntu 16",
+        "end of life", "seol", "unsupported"
+      ];
+
+      let totalRows = 0;
+      let actionableRows = 0;
+      let criticalRows = 0;
+      let eolTotal = 0;
+      let patchPublishedTotal = 0;
+      let configTotal = 0;
+
+      data.forEach(row => {
+        totalRows += 1;
+
+        const status = normalizeStatus(row[columns.state]);
+        const sev = normalizeSeverity(row[columns.severity]);
+        const osName = String(row[columns.os] || "");
+        const osVersion = normalizeOSVersion(osName);
+        const vprLevel = classifyVPR(row[columns.vpr]);
+        const epssLevel = classifyEPSS(row[columns.epss]);
+
+        if (MONTHLY_STATES.includes(status)) {
+          const observedMonths = monthRangeForObservedPeriod(row, columns);
+          observedMonths.forEach(monthIndex => {
+            monthly[monthIndex] += 1;
+          });
+        }
+
+        if (ACTIONABLE_STATES.has(status)) {
+          actionableRows += 1;
+
+          severity[sev] = (severity[sev] || 0) + 1;
+          vpr[vprLevel] = (vpr[vprLevel] || 0) + 1;
+          os[osVersion] = (os[osVersion] || 0) + 1;
+
+          if (sev === "Crítico") {
+            criticalRows += 1;
+          }
+
+          const matrixKey = `${vprLevel}|${epssLevel}`;
+          matrix[matrixKey] = (matrix[matrixKey] || 0) + 1;
+
+          const patchPublished = hasPatchPublished(row, columns);
+
+          if (patchPublished) {
+            patchPublishedTotal += 1;
+            if (isSecurityUpdate(row, columns)) {
+              patch["Security Update"] += 1;
+            } else {
+              patch["Third Party"] += 1;
+            }
+          } else {
+            configTotal += 1;
+            config[sev] = (config[sev] || 0) + 1;
+          }
+
+          const normalizedOS = normalizeText(osName);
+          const vulnerabilityText = [
+            row[columns.name],
+            row[columns.solution],
+            row[columns.family],
+            osName
+          ].map(v => normalizeText(v)).join(" ");
+
+          if (eolKeys.some(key => vulnerabilityText.includes(key) || normalizedOS.includes(key))) {
+            eolTotal += 1;
+            eol[sev] = (eol[sev] || 0) + 1;
+            eolOs[osVersion] = (eolOs[osVersion] || 0) + 1;
+          }
+        }
+      });
+
+      const monthlyDatasets = [{
+        label: "Total de vulnerabilidades observadas",
+        data: monthly,
+        backgroundColor: "#2563eb",
+        borderColor: "#1d4ed8",
+        borderWidth: 1
+      }];
+
+      buildBarChart(
+        "monthly",
+        MONTH_LABELS,
+        monthlyDatasets,
+        `Meses de referência (${TARGET_YEAR})`,
+        "Quantidade de vulnerabilidades observadas",
+        { stacked: false, maxRotation: 45, minRotation: 0 }
+      );
+      try { setChartTrigger(document.getElementById('monthly').closest('.chart-wrap'), 'monthly', 'Vulnerabilidades por Mês', 'Total consolidado por mês em 2026'); } catch (e) { }
+
+      const severityLabels = SEVERITY_ORDER.filter(label => (severity[label] || 0) > 0);
+      const severityValues = severityLabels.map(label => severity[label] || 0);
+      buildPieChart(
+        "severity",
+        severityLabels,
+        severityValues,
+        "Vulnerabilidades por severidade",
+        { colorFn: severityColor, showPercent: true, type: "pie" }
+      );
+      try { setChartTrigger(document.getElementById('severity').closest('.chart-wrap'), 'severity', 'Vulnerabilidades por Severidade', 'Distribuição por severidade'); } catch (e) { }
+
+      const vprLabels = RISK_ORDER_DESC.filter(label => label !== "Desconhecido" || (vpr[label] || 0) > 0);
+      const vprValues = vprLabels.map(label => vpr[label] || 0);
+      buildBarChart(
+        "vpr",
+        vprLabels,
+        [{
+          label: "Quantidade de vulnerabilidades",
+          data: vprValues,
+          backgroundColor: vprLabels.map(severityColor),
+          borderColor: vprLabels.map(severityColor),
+          borderWidth: 1
+        }],
+        "Classificação VPR (Crítico → Baixo)",
+        "Quantidade de vulnerabilidades",
+        { maxRotation: 0 }
+      );
+      try { setChartTrigger(document.getElementById('vpr').closest('.chart-wrap'), 'vpr', 'Vulnerabilidades por VPR', 'Classificação VPR (Crítico → Baixo)'); } catch (e) { }
+
+      const osEntries = sortEntriesByValue(os).slice(0, 10);
+      buildBarChart(
+        "os",
+        osEntries.map(([label]) => label),
+        [{
+          label: "Quantidade de vulnerabilidades",
+          data: osEntries.map(([, value]) => value),
+          backgroundColor: "#2563eb",
+          borderColor: "#1d4ed8",
+          borderWidth: 1
+        }],
+        "Versão do sistema operacional",
+        "Quantidade de vulnerabilidades",
+        { indexAxis: "y", maxRotation: 0 }
+      );
+      try { setChartTrigger(document.getElementById('os').closest('.chart-wrap'), 'os', 'Top 10 por Sistema Operacional', 'Versão do sistema operacional'); } catch (e) { }
+
+      // -------------------------------------------------------------
+      // GRÁFICOS DE EoL (End of Life) COM TRATAMENTO DE ESTADO VAZIO
+      // -------------------------------------------------------------
+      if (eolTotal > 0) {
+        const eolLabels = SEVERITY_ORDER.filter(label => (eol[label] || 0) > 0);
+        const eolValues = eolLabels.map(label => eol[label] || 0);
+        buildPieChart("eol", eolLabels, eolValues, "Vulnerabilidades EoL por severidade", { colorFn: severityColor, showPercent: true, type: "doughnut" });
+        try { setChartTrigger(document.getElementById('eol').closest('.chart-wrap'), 'eol', 'Vulnerabilidades EoL', 'EoL por severidade'); } catch (e) { }
+
+        const eolOsEntries = sortEntriesByValue(eolOs);
+        buildBarChart("eolOs", eolOsEntries.map(([label]) => label), [{
+            label: "Quantidade de vulnerabilidades EoL", data: eolOsEntries.map(([, value]) => value), backgroundColor: "#dc2626", borderColor: "#991b1b", borderWidth: 1
+          }], "Versão do sistema operacional EoL", "Quantidade de vulnerabilidades", { indexAxis: "y", maxRotation: 0 }
+        );
+        try { setChartTrigger(document.getElementById('eolOs').closest('.chart-wrap'), 'eolOs', 'EoL por OS', 'Vulnerabilidades EoL por sistema operacional'); } catch (e) { }
+      
+      } else {
+        const msgSucesso = "<div style='display:flex; height:100%; align-items:center; justify-content:center; flex-direction:column; color:#86efac; font-weight:700; font-size:15px; text-align:center;'><svg style='width:48px;height:48px;margin-bottom:12px;opacity:0.8;' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'></path></svg>Excelente!<br><span style='color:var(--muted); font-size:13px; font-weight:500; margin-top:4px;'>Nenhuma vulnerabilidade End of Life (EoL) detetada na base importada.</span></div>";
+        document.getElementById("eol").parentElement.innerHTML = msgSucesso;
+        document.getElementById("eolOs").parentElement.innerHTML = msgSucesso;
+      }
+
+      drawMatrix(
+        "matrix",
+        RISK_ORDER_DESC.filter(label => label !== "Desconhecido"),
+        RISK_ORDER_LOW_TO_HIGH.filter(label => label !== "Desconhecido"),
+        matrix
+      );
+      try { setChartTrigger(document.getElementById('matrix').closest('.chart-wrap'), 'matrix', 'Matriz VPR x EPSS', 'Quantidade por célula (ACTIVE/NEW/RESURFACED)'); } catch (e) { }
+
+      buildPieChart(
+        "patch",
+        Object.keys(patch),
+        Object.values(patch),
+        "Security Update x Third Party",
+        {
+          colorFn(label) {
+            return label === "Security Update" ? "#2563eb" : "#9333ea";
+          },
+          showPercent: true,
+          type: "pie"
+        }
+      );
+      try { setChartTrigger(document.getElementById('patch').closest('.chart-wrap'), 'patch', 'Security Update x Third Party', 'Security update vs Third party'); } catch (e) { }
+
+      const configLabels = SEVERITY_ORDER.filter(label => label !== "Desconhecido" || (config[label] || 0) > 0);
+      const configValues = configLabels.map(label => config[label] || 0);
+      buildBarChart(
+        "config",
+        configLabels,
+        [{
+          label: "Vulnerabilidades sem patch publicado",
+          data: configValues,
+          backgroundColor: configLabels.map(severityColor),
+          borderColor: configLabels.map(severityColor),
+          borderWidth: 1
+        }],
+        "Severidade",
+        "Quantidade de vulnerabilidades",
+        { maxRotation: 0 }
+      );
+      try { setChartTrigger(document.getElementById('config').closest('.chart-wrap'), 'config', 'Vulnerabilidades por Configuração', 'Vulnerabilidades sem patch publicado'); } catch (e) { }
+
+      setKpi("kpiTotal", totalRows);
+      setKpi("kpiActionable", actionableRows);
+      setKpi("kpiCritical", criticalRows);
+      setKpi("kpiEol", eolTotal);
+      setKpi("kpiPatchPublished", patchPublishedTotal);
+      setKpi("kpiConfig", configTotal);
+
+      setStatus(`Arquivo processado com sucesso: ${formatNumber(totalRows)} linhas lidas; ${formatNumber(actionableRows)} vulnerabilidades ativas.`, "ok");
+    }
+
+    // Leitura aprimorada para lidar de forma nativa com CSV ou ArrayBuffer
+    document.getElementById("excelFile").addEventListener("change", function (e) {
+      const file = e.target.files[0];
+
+      if (!file) {
+        setResultsVisible(false);
+        setStatus("");
+        return;
+      }
+
+      setResultsVisible(false);
+      setStatus(`Lendo arquivo: ${file.name}...`);
+
+      const reader = new FileReader();
+
+      reader.onload = function (evt) {
+        try {
+          let workbook;
+          const fileName = file.name.toLowerCase();
+          
+          if (fileName.endsWith(".csv")) {
+            const decoder = new TextDecoder('utf-8');
+            const csvText = decoder.decode(evt.target.result);
+            workbook = XLSX.read(csvText, { type: "string", cellDates: true, raw: false });
+          } else {
+            const data = new Uint8Array(evt.target.result);
+            workbook = XLSX.read(data, { type: "array", cellDates: true, raw: false });
+          }
+
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+          const json = rowsToObjects(rows);
+
+          processData(json, file.name);
+        } catch (error) {
+          console.error(error);
+          setResultsVisible(false);
+          setStatus(`Erro ao processar o arquivo: ${error.message}`, "err");
+        }
+      };
+
+      reader.onerror = function () {
+        setResultsVisible(false);
+        setStatus("Erro ao ler o arquivo selecionado.", "err");
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+
+    document.getElementById("pickFileBtn").addEventListener("click", function () {
+      document.getElementById("excelFile").click();
+    });
+
+    window.addEventListener("resize", function () {
+      if (currentMatrixPayload) {
+        drawMatrix(
+          currentMatrixPayload.canvasId,
+          currentMatrixPayload.rows,
+          currentMatrixPayload.cols,
+          currentMatrixPayload.matrixData
+        );
+      }
+    });
+
+    const guideModal = document.getElementById("guideModal");
+    const guideModalBackdrop = document.getElementById("guideModalBackdrop");
+    const guideModalClose = document.getElementById("guideModalClose");
+    const guideBtn = document.getElementById("guideBtn");
+
+    function openGuideModal() {
+      guideModal.hidden = false;
+      guideModal.setAttribute("aria-hidden", "false");
+      document.body.classList.add("modal-open");
+    }
+
+    function closeGuideModal() {
+      guideModal.hidden = true;
+      guideModal.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("modal-open");
+    }
+
+    if (guideBtn) guideBtn.addEventListener('click', openGuideModal);
+    if (guideModalClose) guideModalClose.addEventListener('click', closeGuideModal);
+    if (guideModalBackdrop) guideModalBackdrop.addEventListener('click', closeGuideModal);
+
+    const _modalState = { modalChart: null };
+
+    function setChartTrigger(element, chartId, title, subtitle) {
+      if (!element) return;
+      element.style.cursor = "zoom-in";
+      element.tabIndex = 0;
+      element.addEventListener("click", () => openChartModal(chartId, title, subtitle));
+      element.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openChartModal(chartId, title, subtitle);
+        }
+      });
+    }
+
+    function _cloneSerializable(obj) {
+      try {
+        return structuredClone ? structuredClone(obj) : JSON.parse(JSON.stringify(obj));
+      } catch (e) {
+        try { return JSON.parse(JSON.stringify(obj)); } catch (err) { return null; }
+      }
+    }
+
+    function openChartModal(chartId, title, subtitle) {
+      const modal = document.getElementById("chartModal");
+      const canvas = document.getElementById("chartModalCanvas");
+      const legendEl = document.getElementById("chartModalLegend");
+      document.getElementById("chartModalTitle").textContent = title || "";
+      document.getElementById("chartModalSubtitle").textContent = subtitle || "";
+      legendEl.innerHTML = "";
+
+      modal.style.display = "flex";
+      const dpr = window.devicePixelRatio || 1;
+      const dialog = document.getElementById("chartModalDialog");
+      const header = document.getElementById("chartModalHeader");
+      const dialogRect = dialog.getBoundingClientRect();
+      const headerH = header.getBoundingClientRect().height || 56;
+      const legendH = legendEl.getBoundingClientRect().height || 0;
+      const paddingV = 36; 
+      const availableWidth = Math.max(320, dialogRect.width - 36); 
+      const availableHeight = Math.max(220, dialogRect.height - headerH - legendH - paddingV);
+      canvas.style.width = availableWidth + "px";
+      canvas.style.height = availableHeight + "px";
+      canvas.width = Math.round(availableWidth * dpr);
+      canvas.height = Math.round(availableHeight * dpr);
+
+      if (_modalState.modalChart && typeof _modalState.modalChart.destroy === "function") {
+        try { _modalState.modalChart.destroy(); } catch (e) { }
+        _modalState.modalChart = null;
+      }
+
+      if (chartId === "matrix" && currentMatrixPayload) {
+        drawMatrix("chartModalCanvas", currentMatrixPayload.rows, currentMatrixPayload.cols, currentMatrixPayload.matrixData);
+        modal.setAttribute("aria-hidden", "false");
+        return;
+      }
+
+      const source = charts[chartId];
+      if (!source) return;
+
+      const clonedData = _cloneSerializable(source.data || (source.config && source.config.data)) || _cloneSerializable(source.config?.data) || null;
+      let clonedOptions = _cloneSerializable((source.config && source.config.options) || source.options) || {};
+
+      clonedOptions = clonedOptions || {};
+      clonedOptions.responsive = false;
+      clonedOptions.maintainAspectRatio = false;
+      clonedOptions.layout = clonedOptions.layout || {};
+      clonedOptions.layout.padding = Math.max(12, (clonedOptions.layout.padding && clonedOptions.layout.padding.top) ? clonedOptions.layout.padding.top : 24);
+
+      try {
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const type = (source.config && source.config.type) || source.config?.type || source.type || "bar";
+        const dataForModal = clonedData || _cloneSerializable(source._metasets) || source.data;
+
+        if (type === "pie" || type === "doughnut") {
+          if (dataForModal && dataForModal.datasets && dataForModal.datasets[0]) {
+            dataForModal.datasets[0].hoverOffset = Math.min(dataForModal.datasets[0].hoverOffset || 10, 8);
+            dataForModal.datasets[0].borderWidth = Math.min(dataForModal.datasets[0].borderWidth || 3, 2);
+          }
+          clonedOptions.plugins = clonedOptions.plugins || {};
+          clonedOptions.plugins.legend = clonedOptions.plugins.legend || { display: true, position: 'bottom' };
+        }
+
+        _modalState.modalChart = new Chart(ctx, {
+          type,
+          data: dataForModal,
+          options: clonedOptions,
+          plugins: (source.config && source.config.plugins) || []
+        });
+      } catch (err) {
+        console.error("Erro ao criar modalChart:", err);
+      }
+
+      try {
+        const mc = _modalState.modalChart;
+        if (mc && (mc.config.type === "pie" || mc.config.type === "doughnut")) {
+          const labels = mc.data.labels || [];
+          const bg = (mc.data.datasets && mc.data.datasets[0] && mc.data.datasets[0].backgroundColor) || [];
+          labels.forEach((lab, i) => {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "btn";
+            item.style.padding = "6px 10px";
+            item.style.fontWeight = "700";
+            item.style.display = "inline-flex";
+            item.style.alignItems = "center";
+            item.style.gap = "8px";
+            item.innerHTML = `<span style='display:inline-block;width:12px;height:12px;border-radius:6px;background:${bg[i] || '#777'};box-shadow:0 1px 0 rgba(0,0,0,0.2)'></span><span style='color:${AXIS_COLOR}'>${lab}</span>`;
+
+            item.addEventListener("mouseenter", (ev) => {
+              if (!mc) return;
+              mc.setActiveElements([{ datasetIndex: 0, index: i }]);
+              mc.tooltip.setActiveElements([{ datasetIndex: 0, index: i }], { x: ev.clientX, y: ev.clientY });
+              mc.update();
+            });
+
+            item.addEventListener("mouseleave", () => {
+              if (!mc) return;
+              mc.setActiveElements([]);
+              mc.tooltip.setActiveElements([], {});
+              mc.update();
+            });
+
+            legendEl.appendChild(item);
+          });
+        }
+      } catch (e) {
+      }
+
+      modal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeChartModal() {
+      const modal = document.getElementById("chartModal");
+      modal.style.display = "none";
+      modal.setAttribute("aria-hidden", "true");
+      try {
+        if (_modalState.modalChart && typeof _modalState.modalChart.destroy === "function") {
+          _modalState.modalChart.destroy();
+        }
+      } catch (e) { }
+      _modalState.modalChart = null;
+      document.getElementById("chartModalLegend").innerHTML = "";
+    }
+
+    document.getElementById("chartModalClose").addEventListener("click", closeChartModal);
+    document.getElementById("chartModalBackdrop").addEventListener("click", closeChartModal);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        closeChartModal();
+        closeGuideModal();
+      }
+    });
+  </script>
+</body>
+
+</html>

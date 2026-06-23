@@ -1,0 +1,8 @@
+display_operating_system,id,is_licensed,last_authenticated_scan_time,last_licensed_scan_time,last_observed,name,sources,ssl_tls_enabled
+,1933fca8-0a79-4552-9463-d31aaf56d825,true,,2026-03-12T01:00:14.548Z,2026-03-12T01:00:14.548Z,shieldsec.com.br,"ExternalAttackSurfaceMap, WAS",false
+,3d95a4f5-b990-42b7-9b16-5ada42c46180,true,,2026-03-12T01:00:12.444Z,2026-03-12T01:00:12.444Z,desk.cs.zohohost.com,"ExternalAttackSurfaceMap, WAS",true
+,81b1ec98-68e8-433f-8260-d9208540b3c0,true,,2026-05-28T01:00:19.063Z,2026-05-28T01:00:19.063Z,www.shieldsec.com.br,"ExternalAttackSurfaceMap, WAS",true
+Microsoft Windows 10,8738c06a-b6ec-49cc-b528-c1bb5fe5125e,true,,2026-05-28T01:00:12.086Z,2026-05-28T01:00:12.086Z,autodiscover.outlook.com,"ExternalAttackSurfaceMap, WAS",false
+,a58e651c-3f59-43d1-bad7-c5955fceb307,true,,2026-05-19T01:00:19.805Z,2026-05-19T01:00:19.805Z,portal.shieldsec.com.br,"ExternalAttackSurfaceMap, WAS",false
+,da0d0e59-02e2-4109-9c7d-995a9f2f1301,true,,2026-04-21T01:00:44.638Z,2026-05-19T01:00:53.372Z,shieldsec.zohodesk.com,Web Application,true
+,e50dfbc5-3494-4956-87f4-09fad9dfa510,true,,2026-03-12T01:00:12.444Z,2026-03-12T01:00:12.444Z,help.shieldsec.com.br,"ExternalAttackSurfaceMap, WAS",false

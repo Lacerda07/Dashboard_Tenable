@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Aplicações Web | Tenable WAS</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+  <style>
+    :root {
+      --bg-primary: #07111f;
+      --bg-secondary: #0d1b2e;
+      --bg-card: rgba(15, 27, 46, 0.92);
+      --bg-card-soft: rgba(20, 37, 62, 0.9);
+      --panel: rgba(15, 27, 46, 0.92);
+      --panel-2: rgba(20, 37, 62, 0.9);
+      --ink: #e5edf7;
+      --muted: #8fa4bd;
+      --line: rgba(148, 163, 184, 0.18);
+      --blue: #38bdf8;
+      --cyan: #22d3ee;
+      --green: #22c55e;
+      --orange: #f59e0b;
+      --purple: #a78bfa;
+      --red: #ef4444;
+      --shadow: 0 18px 55px rgba(0, 0, 0, 0.38);
+      --radius: 18px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    #div-Header-right { padding: 10px; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(34, 211, 238, 0.18), transparent 34%),
+        radial-gradient(circle at top right, rgba(139, 92, 246, 0.16), transparent 30%),
+        linear-gradient(135deg, var(--bg-primary), #101827 58%, #06101e);
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.modal-open { overflow: hidden !important; touch-action: none; }
+
+    /* --- MENU SUPERIOR (TOP NAV) PROFISSIONAL --- */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      width: 100%;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: rgba(11, 20, 36, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .nav-left { display: flex; align-items: center; flex: 1; }
+    .nav-center { display: flex; align-items: center; justify-content: center; }
+    .nav-right { display: flex; align-items: center; justify-content: flex-end; flex: 1; }
+
+    .nav-logo { display: flex; align-items: center; text-decoration: none; }
+    .nav-logo img { height: 42px; width: auto; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(34, 211, 238, 0.15)); }
+
+    .nav-menu { display: flex; height: 76px; gap: 6px; }
+    .nav-item {
+      position: relative; display: flex; align-items: center; gap: 8px; padding: 0 14px;
+      color: #94a3b8; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      cursor: pointer; transition: color 0.2s, background 0.2s;
+    }
+    .nav-icon { display: flex; align-items: center; justify-content: center; }
+
+    .nav-item::after {
+      content: ""; position: absolute; bottom: 0; left: 16px; right: 16px; height: 3px;
+      background: var(--accent); border-radius: 4px 4px 0 0; opacity: 0; transition: 0.2s;
+    }
+    .nav-item:hover, .nav-item.active { color: #fff; background: rgba(255, 255, 255, 0.03); }
+    .nav-item:hover::after, .nav-item.active::after { opacity: 1; }
+
+    .dropdown-menu {
+      position: absolute; top: 100%; left: 0; min-width: 200px;
+      background: rgba(15, 27, 46, 0.98); border: 1px solid rgba(148, 163, 184, 0.18); border-top: none;
+      border-radius: 0 0 14px 14px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35); padding: 8px; display: flex;
+      flex-direction: column; gap: 4px; opacity: 0; visibility: hidden; transform: translateY(10px);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .dropdown-menu::before {
+      content: ""; position: absolute; top: -1px; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+    .nav-item:hover .dropdown-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+
+    .dropdown-item {
+      padding: 10px 14px; color: #cbd5e1; text-decoration: none; font-size: 13px; font-weight: 600;
+      border-radius: 8px; text-transform: none; letter-spacing: normal; transition: all 0.15s ease; white-space: nowrap;
+    }
+    .dropdown-item:hover, .dropdown-item.active { background: rgba(34, 211, 238, 0.12); color: var(--accent); }
+
+    .home-btn {
+      display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.2); background: rgba(15, 23, 42, 0.4); transition: all 0.2s ease;
+      text-decoration: none; --pld-icon-strokeWidth: 1.5;
+    }
+    .home-btn svg { width: 18px; height: 18px; }
+    .home-btn:hover {
+      color: #fff; border-color: var(--accent); background: rgba(34, 211, 238, 0.1);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2); transform: translateY(-1px);
+    }
+    /* ------------------------------------------- */
+
+    .app-shell { width: 100%; margin: 0; display: flex; flex-direction: column; flex: 1; }
+
+    /* === ESTRUTURA MAIN / HERO === */
+    .page { width: 100%; max-width: 1480px; margin: 0 auto; padding: 30px 24px; }
+
+    .hero {
+      position: relative; overflow: hidden; padding: 30px; border: 1px solid var(--border); border-radius: 28px;
+      background: linear-gradient(135deg, rgba(15, 27, 46, 0.96), rgba(13, 27, 46, 0.76)), linear-gradient(90deg, rgba(34, 211, 238, 0.12), rgba(139, 92, 246, 0.12));
+      box-shadow: var(--shadow); margin-bottom: 20px;
+    }
+    .hero::before {
+      content: ""; position: absolute; inset: -60px -90px auto auto; width: 260px; height: 260px;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.28), transparent 68%); filter: blur(2px);
+    }
+    .hero-content { position: relative; display: grid; grid-template-columns: 1.4fr 0.85fr; gap: 24px; align-items: stretch; }
+    
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 12px; border-radius: 999px;
+      border: 1px solid rgba(34, 211, 238, 0.26); color: #b6f1ff; background: rgba(34, 211, 238, 0.09); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .h1-title { margin: 0; font-size: 32px; font-weight: 700; color: #fff; position: relative; z-index: 2;}
+    .subtitle { margin: 14px 0 0; color: var(--muted); font-size: 16px; line-height: 1.55; position: relative; z-index: 2; max-width: 920px;}
+
+    .upload-panel {
+      border: 1px dashed rgba(34, 211, 238, 0.38); border-radius: 24px;
+      background: linear-gradient(180deg, rgba(20, 37, 62, 0.92), rgba(15, 27, 46, 0.86));
+      padding: 20px; display: flex; flex-direction: column; gap: 14px; min-height: 230px; justify-content: center;
+      transition: all 0.18s ease; position: relative; z-index: 2;
+    }
+    .upload-panel.dragging { border-color: rgba(34, 211, 238, 0.95); background: rgba(34, 211, 238, 0.12); transform: translateY(-2px); }
+    .upload-title { margin: 0; font-size: 18px; font-weight: 800; }
+    .upload-hint { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+    .file-input-wrap { position: relative; display: inline-flex; width: fit-content; }
+    .file-input-wrap input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 14px; padding: 12px 16px;
+      color: #06101e; background: linear-gradient(135deg, var(--accent), #60a5fa); font-weight: 800; cursor: pointer; box-shadow: 0 12px 30px rgba(34, 211, 238, 0.22); transition: transform 0.15s;
+    }
+    .btn:hover { transform: translateY(-1px); }
+
+    .status { min-height: 22px; font-size: 13px; color: var(--muted); }
+    .status.ok { color: #86efac; }
+    .status.error { color: #fca5a5; }
+
+    .meta-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .meta-chip { padding: 9px 12px; border: 1px solid var(--border); border-radius: 999px; color: #cbd5e1; background: rgba(15, 23, 42, 0.42); font-size: 12px; }
+
+    /* === CONTEÚDO E PAINEIS === */
+    .section { margin-top: 26px; }
+    .section-header { display: flex; justify-content: space-between; gap: 18px; align-items: end; margin-bottom: 14px; }
+    .section-title { margin: 0; font-size: 22px; letter-spacing: -0.02em; font-weight: 800; }
+    .section-desc { margin: 5px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 0 0 20px;}
+    .kpi-card {
+      position: relative; overflow: hidden; min-height: 150px; padding: 18px;
+      border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-card); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2);
+    }
+    .kpi-card::after {
+      content: ""; position: absolute; right: -50px; top: -70px; width: 150px; height: 150px;
+      border-radius: 999px; background: radial-gradient(circle, rgba(34, 211, 238, 0.18), transparent 70%);
+    }
+
+    .kpi-label { position: relative; margin: 0; color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.055em; }
+    .kpi-value { position: relative; margin: 14px 0 4px; color: #ffffff; font-size: clamp(28px, 3vw, 42px); line-height: 1; font-weight: 900; letter-spacing: -0.04em; word-break: break-word; }
+    .kpi-help { position: relative; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .score-card { background: linear-gradient(135deg, rgba(34, 211, 238, 0.16), rgba(139, 92, 246, 0.12)), var(--bg-card); grid-column: span 1; }
+
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;}
+    .wide { grid-column: 1 / -1; }
+
+    .panel { padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-card); box-shadow: 0 14px 42px rgba(0, 0, 0, 0.2); }
+    .panel-title { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .panel-title h3 { margin: 0; font-size: 17px; letter-spacing: -0.01em; color: #fff; }
+    .panel-title p { margin: 5px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+    .chart-wrap {
+      position: relative; width: 100%; height: 335px; flex: 1; min-height: 315px; padding: 14px;
+      border: 1px solid var(--border); border-radius: 16px;
+      background: radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 30%), linear-gradient(180deg, rgba(15, 27, 46, 0.98) 0%, rgba(15, 27, 46, 0.92) 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    .chart-clickable { cursor: zoom-in; transition: transform 0.15s ease; }
+    .chart-clickable:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+
+    .table-panel { overflow: hidden; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border); }
+    .table-scroll { overflow: auto; max-height: 520px; }
+    table { width: 100%; border-collapse: collapse; min-width: 860px; background: rgba(15, 23, 42, 0.25); }
+    th, td { padding: 12px 13px; border-bottom: 1px solid rgba(148, 163, 184, 0.12); text-align: left; font-size: 12px; white-space: nowrap; }
+    th { position: sticky; top: 0; z-index: 1; color: #c7f9ff; background: rgba(15, 27, 46, 0.98); text-transform: uppercase; letter-spacing: 0.055em; font-size: 11px; }
+
+    .empty-state { padding: 30px; border: 1px solid var(--border); border-radius: 22px; background: var(--bg-card); color: var(--muted); text-align: center; }
+    .hidden { display: none !important; }
+
+    .badge { display: inline-flex; align-items: center; padding: 6px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 0.035em; text-transform: uppercase; background: rgba(148, 163, 184, 0.12); color: #dbeafe; }
+    .badge.green { background: rgba(34, 197, 94, 0.13); color: #86efac; }
+    .badge.red { background: rgba(239, 68, 68, 0.13); color: #fca5a5; }
+    .badge.amber { background: rgba(245, 158, 11, 0.14); color: #fde68a; }
+    .badge.purple { background: rgba(139, 92, 246, 0.13); color: #c4b5fd; }
+
+    /* === MODAIS CSS === */
+    .chart-modal[hidden] { display: none !important; }
+    .table-modal[hidden] { display: none !important; }
+
+    .chart-modal, .table-modal {
+      position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .chart-modal-backdrop, .table-modal-backdrop {
+      position: absolute; inset: 0; background: rgba(2, 6, 23, 0.72); backdrop-filter: blur(10px);
+    }
+
+    .chart-modal-dialog, .table-modal-dialog {
+      position: relative; width: min(1180px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; gap: 16px;
+      padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: linear-gradient(180deg, rgba(15, 27, 46, 0.98), rgba(8, 15, 28, 0.98)); box-shadow: var(--shadow);
+    }
+
+    .chart-modal-header, .table-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .chart-modal-title, .table-modal-title { margin: 0; font-size: 20px; font-weight: 850; color: #fff; }
+    .chart-modal-subtitle, .table-modal-subtitle { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .chart-modal-close, .table-modal-close {
+      border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; background: rgba(255, 255, 255, 0.04); color: #fff; font-weight: 800; cursor: pointer; transition: background 0.2s;
+    }
+    .chart-modal-close:hover, .table-modal-close:hover { background: rgba(255, 255, 255, 0.1); }
+
+    .chart-modal-body, .table-modal-body {
+      position: relative; flex: 1; min-height: 62vh; border: 1px solid var(--border); border-radius: 18px;
+      background: radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 30%), linear-gradient(180deg, rgba(15, 27, 46, 0.98) 0%, rgba(15, 27, 46, 0.95) 100%); padding: 16px; overflow: hidden;
+    }
+    .table-modal-body { overflow: auto; }
+    #tableModalSlot table { min-width: 1180px; }
+
+    .chart-modal-slot { position: relative; width: 100%; height: 100%; min-height: 62vh; }
+    .chart-modal-slot canvas { display: block; width: 100% !important; height: 100% !important; }
+
+    .legend-list { display: grid; gap: 8px; margin-top: 12px; }
+    .legend-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 12px; background: rgba(2, 6, 23, 0.28); color: #cbd5e1; font-size: 12px; cursor: default; }
+    .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; margin-right: 8px; }
+
+    /* === CSS OTIMIZADO PARA EXPORTAÇÃO PDF === */
+    @media print {
+      @page { size: landscape; margin: 10mm; }
+      body, html { 
+        background: #07111f !important; color: #e5edf7 !important; 
+        -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; 
+        height: auto !important; overflow: visible !important; 
+      }
+      
+      .top-nav, .hero, .no-print, .chart-modal, .table-modal, #btnExport { display: none !important; }
+      
+      .app-shell { padding: 0 !important; margin: 0 !important; max-width: 100% !important; display: block !important; }
+      #dashboardContent { display: block !important; }
+      
+      .section { page-break-inside: auto !important; break-inside: auto !important; margin-top: 10px !important; }
+      .print-new-page { page-break-before: always !important; break-before: page !important; }
+      
+      .kpi-grid { display: flex !important; flex-wrap: wrap !important; gap: 10px !important; margin-bottom: 20px !important;}
+      .kpi-card { flex: 1 1 20% !important; break-inside: avoid !important; page-break-inside: avoid !important; margin-bottom: 10px !important; }
+      
+      .chart-grid { display: flex !important; flex-wrap: wrap !important; gap: 15px !important; margin-bottom: 20px !important; page-break-inside: auto !important;}
+      .panel { 
+        flex: 1 1 calc(50% - 15px) !important; 
+        break-inside: avoid !important; page-break-inside: avoid !important; 
+        overflow: visible !important; border: 1px solid rgba(148, 163, 184, 0.3) !important;
+        margin-bottom: 15px !important;
+      }
+      .panel.wide, .panel.table-panel { flex: 1 1 100% !important; }
+      
+      .table-scroll { max-height: none !important; overflow: visible !important; height: auto !important; }
+      .table-panel { page-break-inside: auto !important; break-inside: auto !important; }
+      table { width: 100% !important; page-break-inside: auto !important; break-inside: auto !important; }
+      thead { display: table-header-group !important; }
+      tbody { display: table-row-group !important; }
+      tr { break-inside: avoid !important; page-break-inside: avoid !important; page-break-after: auto !important; }
+      th, td { page-break-inside: avoid !important; break-inside: avoid !important; }
+      th { position: static !important; } 
+      
+      .chart-wrap { height: 280px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+      ::-webkit-scrollbar { display: none; }
+    }
+
+    @media (max-width: 1100px) {
+      .top-nav { padding: 0 16px; overflow-x: auto; gap: 24px; justify-content: flex-start;}
+      .nav-left { flex: 0 0 auto; }
+      .nav-center { flex: 1 0 auto; }
+      .nav-right { flex: 0 0 auto; margin-left: auto; }
+      .chart-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .score-card { grid-column: span 2; }
+      .hero-content { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  
+  <header class="top-nav">
+    <div class="nav-left">
+      <a href="../../index.html" class="nav-logo">
+        <img src="../images/logo-shield-header.png" alt="Logo Shield" />
+      </a>
+    </div>
+
+    <div class="nav-center">
+      <nav class="nav-menu">
+        
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M14.502 5.999a2.5 2.5 0 1 1 0-3.997M11 2.5H3a1.5 1.5 0 1 0 0 3h8M1.85 5l3.983 5.586M8.694 9.43 5.891 5.5M8 11.995v.01m-2.5-.174a2.5 2.5 0 0 1 5 0v.669c0 1 1 .96 1.042 2H4.505c-.005-1.04.995-1 .995-2v-.67Z"></path>
+            </svg>
+          </span>
+          Oerational Technology
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M9.99218 7.5252C8.75122 9.81068 6.96624 11.9042 5.46441 12.9372M11.417 3.67499C11.3199 4.2481 11.1565 4.84053 10.9407 5.43752M9.69429 5.66581C8.7959 4.86934 7.7354 4.19381 6.50999 3.73915M13.1917 11.1995C12.8465 9.98727 12.2006 8.61567 11.2464 7.35127M3.55783 12.7451C2.29138 11.5591 1.5 9.87188 1.5 7.99986C1.5 7.48353 1.5602 6.98127 1.67397 6.4997M12.403 12.7815C11.2451 13.8483 9.69863 14.4999 8 14.4999C7.10254 14.4999 6.24756 14.318 5.46991 13.9891M12.4221 3.2359C13.7003 4.42289 14.5 6.11798 14.5 7.99987C14.5 9.15355 14.1994 10.237 13.6723 11.1763M6.45841 1.68377C6.95257 1.56357 7.46885 1.49986 8 1.49986C8.88689 1.49986 9.7323 1.67749 10.5026 1.9991M4.5 2.99986C4.5 3.82829 3.82843 4.49986 3 4.49986C2.17157 4.49986 1.5 3.82829 1.5 2.99986C1.5 2.17144 2.17157 1.49986 3 1.49986C3.82843 1.49986 4.5 2.17144 4.5 2.99986ZM12.6667 2.53504C12.6667 3.16924 12.1525 3.68336 11.5183 3.68336C10.8841 3.68336 10.37 3.16924 10.37 2.53504C10.37 1.90084 10.8841 1.38672 11.5183 1.38672C12.1525 1.38672 12.6667 1.90084 12.6667 2.53504ZM5.59832 13.4647C5.59832 14.0989 5.0842 14.613 4.45 14.613C3.8158 14.613 3.30168 14.0989 3.30168 13.4647C3.30168 12.8305 3.8158 12.3164 4.45 12.3164C5.0842 12.3164 5.59832 12.8305 5.59832 13.4647ZM14.6 12.3164C14.6 12.9506 14.0859 13.4647 13.4517 13.4647C12.8175 13.4647 12.3034 12.9506 12.3034 12.3164C12.3034 11.6822 12.8175 11.1681 13.4517 11.1681C14.0859 11.1681 14.6 11.6822 14.6 12.3164ZM11.6377 6.49366C11.6377 7.12786 11.1236 7.64198 10.4894 7.64198C9.85518 7.64198 9.34106 7.12786 9.34106 6.49366C9.34106 5.85946 9.85518 5.34534 10.4894 5.34534C11.1236 5.34534 11.6377 5.85946 11.6377 6.49366Z"></path>
+            </svg>
+          </span>
+          Attack Surface Management
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="M15.5 14v1.5h-5v-5h3m-1 2 1 1 2-3m-10-5L4 7l1.5 1.5m1.5 0 1-3m1.52 0L11 7 9.52 8.5m3.98 0V2.498a.998.998 0 0 0-.998-.998H2.498a.998.998 0 0 0-.998.998v8.044c0 .551.447.998.998.998H8.5m-7-8.04h12"></path>
+            </svg>
+          </span>
+          Security Tools
+          <div class="dropdown-menu">
+            <a href="../TENABLE TOOLS/Custom_audit.html" class="dropdown-item">Custom Audit</a>
+          </div>
+        </div>
+
+        <div class="nav-item active">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="m9.5 9.5 2-2-2-.98 1.97-1.99L9.5 3.5l1.643-1.643L8 1 2.5 2.5v7.031c0 2.969 2.934 4.686 5.398 5.727.065.028.139.028.204 0C10.566 14.218 13.5 12.5 13.5 9.53V2.5"></path>
+            </svg>
+          </span>
+          Vulnerability Management
+          <div class="dropdown-menu">
+            <a href="dashboard_agentes_tenable_vm.html" class="dropdown-item active">Agentes</a>
+            <a href="dashboard_gestao_ativos_tenable_vm.html" class="dropdown-item">Ativos</a>
+            <a href="Dashboard de Compliance de Host Audit.html" class="dropdown-item">Compliance</a>
+            <a href="Dashboard Tenable VM - Findings.html" class="dropdown-item">Findings</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M9.99218 7.5252C8.75122 9.81068 6.96624 11.9042 5.46441 12.9372M11.417 3.67499C11.3199 4.2481 11.1565 4.84053 10.9407 5.43752M9.69429 5.66581C8.7959 4.86934 7.7354 4.19381 6.50999 3.73915M13.1917 11.1995C12.8465 9.98727 12.2006 8.61567 11.2464 7.35127M3.55783 12.7451C2.29138 11.5591 1.5 9.87188 1.5 7.99986C1.5 7.48353 1.5602 6.98127 1.67397 6.4997M12.403 12.7815C11.2451 13.8483 9.69863 14.4999 8 14.4999C7.10254 14.4999 6.24756 14.318 5.46991 13.9891M12.4221 3.2359C13.7003 4.42289 14.5 6.11798 14.5 7.99987C14.5 9.15355 14.1994 10.237 13.6723 11.1763M6.45841 1.68377C6.95257 1.56357 7.46885 1.49986 8 1.49986C8.88689 1.49986 9.7323 1.67749 10.5026 1.9991M4.5 2.99986C4.5 3.82829 3.82843 4.49986 3 4.49986C2.17157 4.49986 1.5 3.82829 1.5 2.99986C1.5 2.17144 2.17157 1.49986 3 1.49986C3.82843 1.49986 4.5 2.17144 4.5 2.99986ZM12.6667 2.53504C12.6667 3.16924 12.1525 3.68336 11.5183 3.68336C10.8841 3.68336 10.37 3.16924 10.37 2.53504C10.37 1.90084 10.8841 1.38672 11.5183 1.38672C12.1525 1.38672 12.6667 1.90084 12.6667 2.53504ZM5.59832 13.4647C5.59832 14.0989 5.0842 14.613 4.45 14.613C3.8158 14.613 3.30168 14.0989 3.30168 13.4647C3.30168 12.8305 3.8158 12.3164 4.45 12.3164C5.0842 12.3164 5.59832 12.8305 5.59832 13.4647ZM14.6 12.3164C14.6 12.9506 14.0859 13.4647 13.4517 13.4647C12.8175 13.4647 12.3034 12.9506 12.3034 12.3164C12.3034 11.6822 12.8175 11.1681 13.4517 11.1681C14.0859 11.1681 14.6 11.6822 14.6 12.3164ZM11.6377 6.49366C11.6377 7.12786 11.1236 7.64198 10.4894 7.64198C9.85518 7.64198 9.34106 7.12786 9.34106 6.49366C9.34106 5.85946 9.85518 5.34534 10.4894 5.34534C11.1236 5.34534 11.6377 5.85946 11.6377 6.49366Z"></path>
+            </svg>
+          </span>
+          Web Application
+          <div class="dropdown-menu">
+            <a href="../TENABLE WAS/Was_app.html" class="dropdown-item">Aplicações</a>
+            <a href="../TENABLE WAS/Was_Vulnerabilidades.html" class="dropdown-item">Vulnerabilidades</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linejoin="round" stroke-miterlimit="10" d="M11.228 13.518c2.668 0 3.36-1.786 3.36-3.048 0-1.643-1.166-2.458-2.04-2.67a2.102 2.102 0 0 0-1.728-3.296c-.474 0-.907.162-1.26.427-.78-1.733-1.995-2.425-3.583-2.425-2.196 0-3.975 1.922-3.975 4.117 0 .754.222 1.452.587 2.053a2.676 2.676 0 0 0-1.07 2.134 2.69 2.69 0 0 0 2.69 2.69l7.02.018Z"></path>
+            </svg>
+          </span>
+          CLoud Security
+          <div class="dropdown-menu">
+            <a href="../TENABLE CS/CS_Findings.html" class="dropdown-item">Findings</a>
+            <a href="../TENABLE CS/CS_Vulnerabilidades.html" class="dropdown-item">Vulnerabilidades</a>
+            <a href="" class="dropdown-item">Inventário</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="M4.105 12.82v-.68a2.612 2.612 0 0 1 2.612-2.612h2.612a2.612 2.612 0 0 1 2.612 2.612v.567M2.5 2.5 8 1l5.5 1.5v7.03c0 2.97-2.934 4.688-5.398 5.728a.263.263 0 0 1-.204 0C5.434 14.218 2.5 12.5 2.5 9.531V2.5Zm7.508 2.997a2.008 2.008 0 1 1-4.016 0 2.008 2.008 0 0 1 4.016 0Z"></path>
+            </svg>
+          </span>
+          Identity Exposure
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="m1.639 6.813 1.445 5.396a1 1 0 0 0 .707.707l5.396 1.445a1 1 0 0 0 .966-.258l3.95-3.95a1 1 0 0 0 .258-.966L12.916 3.79a1 1 0 0 0-.707-.707L6.813 1.64a1 1 0 0 0-.966.258l-3.95 3.95a1 1 0 0 0-.258.966Z"></path>
+            </svg>
+          </span>
+          Exposure Management
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Exposure Cards</a>
+          </div>
+        </div>
+      </nav>
+    </div>
+
+    <div class="nav-right">
+      <a href="../../index.html" class="home-btn" aria-label="Voltar para a Home">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 16 16" fill="none" style="display: block; stroke-width: var(--pld-icon-strokeWidth);" aria-label="IconApps">
+          <path d="M4 4.5H2C1.72386 4.5 1.5 4.27614 1.5 4V2C1.5 1.72386 1.72386 1.5 2 1.5H4C4.27614 1.5 4.5 1.72386 4.5 2V4C4.5 4.27614 4.27614 4.5 4 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 4.5H7C6.72386 4.5 6.5 4.27614 6.5 4V2C6.5 1.72386 6.72386 1.5 7 1.5H9C9.27614 1.5 9.5 1.72386 9.5 2V4C9.5 4.27614 9.27614 4.5 9 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 4.5H12C11.7239 4.5 11.5 4.27614 11.5 4V2C11.5 1.72386 11.7239 1.5 12 1.5H14C14.2761 1.5 14.5 1.72386 14.5 2V4C14.5 4.27614 14.2761 4.5 14 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M4 9.5H2C1.72386 9.5 1.5 9.27614 1.5 9V7C1.5 6.72386 1.72386 6.5 2 6.5H4C4.27614 6.5 4.5 6.72386 4.5 7V9C4.5 9.27614 4.27614 9.5 4 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 9.5H7C6.72386 9.5 6.5 9.27614 6.5 9V7C6.5 6.72386 6.72386 6.5 7 6.5H9C9.27614 6.5 9.5 6.72386 9.5 7V9C9.5 9.27614 9.27614 9.5 9 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 9.5H12C11.7239 9.5 11.5 9.27614 11.5 9V7C11.5 6.72386 11.7239 6.5 12 6.5H14C14.2761 6.5 14.5 6.72386 14.5 7V9C14.5 9.27614 14.2761 9.5 14 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M4 14.5H2C1.72386 14.5 1.5 14.2761 1.5 14V12C1.5 11.7239 1.72386 11.5 2 11.5H4C4.27614 11.5 4.5 11.7239 4.5 12V14C4.5 14.2761 4.27614 14.5 4 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 14.5H7C6.72386 14.5 6.5 14.2761 6.5 14V12C6.5 11.7239 6.72386 11.5 7 11.5H9C9.27614 11.5 9.5 11.7239 9.5 12V14C9.5 14.2761 9.27614 14.5 9 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 14.5H12C11.7239 14.5 11.5 14.2761 11.5 14V12C11.5 11.7239 11.7239 11.5 12 11.5H14C14.2761 11.5 14.5 11.7239 14.5 12V14C14.5 14.2761 14.2761 14.5 14 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+
+  <div class="app-shell">
+    <main class="page">
+      <section class="hero no-print">
+        <div class="hero-content">
+          <div>
+            <div class="eyebrow">Tenable Web App Scanning · EASM</div>
+            <h1 class="h1-title">Dashboard Aplicações Web</h1>
+            <p class="subtitle">Importe o ficheiro CSV do inventário WAS para calcular métricas de licenciamento, SSL/TLS, cobertura de autenticação e origens de mapeamento.</p>
+            <div class="meta-strip">
+              <span class="meta-chip">Ativos únicos geridos por <strong>name</strong></span>
+              <span class="meta-chip">Janela de Autenticação avaliada em <strong>30 dias</strong></span>
+            </div>
+          </div>
+          <div id="dropZone" class="upload-panel">
+            <p class="upload-title">Importar base de dados</p>
+            <p class="upload-hint">Arraste o arquivo para esta área ou selecione um arquivo .csv contendo as colunas do seu inventário.</p>
+            <div class="file-input-wrap">
+              <button id="pickFileBtn" class="btn" type="button">Selecionar Ficheiro</button>
+              <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" multiple />
+            </div>
+            <div id="fileStatus" class="status">Aguardando importação do arquivo.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="dashboardEmpty" class="section no-print">
+        <div class="empty-state">Importe um arquivo CSV de inventário para gerar os indicadores e gráficos automaticamente.</div>
+      </section>
+
+      <section id="dashboardContent" class="hidden">
+        <section class="section">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Principais indicadores WAS</h2>
+              <p class="section-desc">Métricas extraídas diretamente do ficheiro de base de dados.</p>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <span id="loadedInfo" class="badge">Nenhum arquivo carregado</span>
+              <button id="btnExport" class="btn no-print" style="padding: 8px 16px; font-size: 13px; background: linear-gradient(135deg, var(--green), #4ade80); color: #06101e; border: none; font-weight: 800; border-radius: 12px; cursor: pointer; display: none;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Exportar Relatório
+              </button>
+            </div>
+          </div>
+
+          <div class="kpi-grid">
+            <article class="kpi-card score-card">
+              <p class="kpi-label">Total de Aplicações</p>
+              <div id="valTotal" class="kpi-value">0</div>
+              <div class="kpi-help">Contagem de aplicações mapeadas na base.</div>
+            </article>
+
+            <article class="kpi-card">
+              <p class="kpi-label">Licenciamento Ativo</p>
+              <div id="valLic" class="kpi-value">0</div>
+              <div class="kpi-help">Ativos que consomem a licença (is_licensed = true).</div>
+            </article>
+
+            <article class="kpi-card">
+              <p class="kpi-label">SSL/TLS Ativo</p>
+              <div id="valSsl" class="kpi-value">0</div>
+              <div class="kpi-help">Aplicações com comunicação segura ativa.</div>
+            </article>
+
+            <article class="kpi-card">
+              <p class="kpi-label">Scan Autenticado (30d)</p>
+              <div id="valAuth" class="kpi-value">0</div>
+              <div class="kpi-help">Varreduras credenciadas recentes.</div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Análises de Conformidade e Autenticação</h2>
+              <p class="section-desc">Status detalhado de licenças, encriptação e histórico de autenticação.</p>
+            </div>
+          </div>
+
+          <div class="chart-grid">
+            <article class="panel">
+              <div class="panel-title">
+                <div>
+                  <h3>Status de Licenciamento</h3>
+                  <p>Aplicações licenciadas vs não licenciadas</p>
+                </div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartLicensing"></canvas></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-title">
+                <div>
+                  <h3>Status de Comunicação (SSL/TLS)</h3>
+                  <p>Adoção de tráfego seguro nas aplicações web</p>
+                </div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartSsl"></canvas></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-title">
+                <div>
+                  <h3>Histórico de Autenticação</h3>
+                  <p>Recência do scan credenciado na aplicação</p>
+                </div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartAuthDetailed"></canvas></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-title">
+                <div>
+                  <h3>Fontes de Descoberta (Sources)</h3>
+                  <p>Distribuição das aplicações pelas fontes mapeadas</p>
+                </div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartSources"></canvas></div>
+            </article>
+
+            <article class="panel wide">
+              <div class="panel-title">
+                <div>
+                  <h3>Distribuição por Sistema Operacional</h3>
+                  <p>Sistemas operativos identificados nos hosts do inventário (Top 10)</p>
+                </div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartOs"></canvas></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section print-new-page no-print">
+          <article class="panel table-panel" style="margin-bottom: 24px;">
+            <div class="panel-title">
+              <div>
+                <h3 style="color: var(--red);">Alerta: Ativos Obsoletos (>30 dias sem observação)</h3>
+                <p>Aplicações que não comunicam ou não são identificadas pelo EASM/WAS recentemente. Ordenado pelos mais inativos.</p>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table id="staleTable">
+                <thead>
+                  <tr>
+                    <th>Nome do Ativo</th>
+                    <th>Dias sem observação</th>
+                    <th>Última Observação</th>
+                    <th>Origem (Sources)</th>
+                  </tr>
+                </thead>
+                <tbody id="staleBody"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="panel table-panel">
+            <div class="panel-title">
+              <div>
+                <h3>Listagem Geral de Inventário</h3>
+                <p>Visão tabular consolidada de toda a base de dados carregada.</p>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table id="inventoryTable">
+                <thead>
+                  <tr>
+                    <th>Nome do Ativo</th>
+                    <th>Licenciado</th>
+                    <th>SSL / TLS</th>
+                    <th>Autenticação</th>
+                    <th>Sistema Operacional</th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+      </section>
+    </main>
+  </div>
+
+  <div id="chartModal" class="chart-modal hidden" aria-hidden="true">
+    <div id="chartModalBackdrop" class="chart-modal-backdrop"></div>
+    <div class="chart-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="chartModalTitle">
+      <div class="chart-modal-header">
+        <div>
+          <h3 id="chartModalTitle" class="chart-modal-title">Gráfico ampliado</h3>
+          <p id="chartModalSubtitle" class="chart-modal-subtitle"></p>
+        </div>
+        <button id="chartModalClose" class="chart-modal-close" type="button">Fechar</button>
+      </div>
+      <div class="chart-modal-body">
+        <div id="chartModalSlot" class="chart-modal-slot">
+          <canvas id="chartModalCanvas"></canvas>
+        </div>
+        <div id="chartModalLegend" class="legend-list" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tableModal" class="table-modal hidden" aria-hidden="true">
+    <div id="tableModalBackdrop" class="table-modal-backdrop"></div>
+    <div class="table-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="tableModalTitle">
+      <div class="table-modal-header">
+        <div>
+          <h3 id="tableModalTitle" class="table-modal-title">Tabela ampliada</h3>
+          <p id="tableModalSubtitle" class="table-modal-subtitle"></p>
+        </div>
+        <button id="tableModalClose" class="table-modal-close" type="button">Fechar</button>
+      </div>
+      <div class="table-modal-body">
+        <div id="tableModalSlot"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const COLORS = { passed: "#22c55e", failed: "#ef4444", warning: "#f59e0b", other: "#38bdf8", blue: "#38bdf8", purple: "#8b5cf6", purpleDark: "#6d28d9", grid: "rgba(148, 163, 184, 0.14)", text: "#cbd5e1", muted: "#8fa4bd" };
+    const state = { charts: [], modalChart: null, modalFrame: null };
+
+    const fileInput = document.getElementById("fileInput");
+    const dropZone = document.getElementById("dropZone");
+    const fileStatus = document.getElementById("fileStatus");
+    const pickFileBtn = document.getElementById("pickFileBtn");
+    const chartModal = document.getElementById("chartModal"), chartModalBackdrop = document.getElementById("chartModalBackdrop"), chartModalClose = document.getElementById("chartModalClose"), chartModalTitle = document.getElementById("chartModalTitle"), chartModalSubtitle = document.getElementById("chartModalSubtitle"), chartModalSlot = document.getElementById("chartModalSlot"), chartModalLegend = document.getElementById("chartModalLegend"), chartModalCanvas = document.getElementById("chartModalCanvas");
+    const tableModal = document.getElementById("tableModal"), tableModalBackdrop = document.getElementById("tableModalBackdrop"), tableModalClose = document.getElementById("tableModalClose"), tableModalTitle = document.getElementById("tableModalTitle"), tableModalSubtitle = document.getElementById("tableModalSubtitle"), tableModalSlot = document.getElementById("tableModalSlot");
+
+    if (pickFileBtn) pickFileBtn.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", (e) => { const file = e.target.files?.[0]; if (file) handleFile(file); });
+    ["dragenter", "dragover"].forEach((eName) => { dropZone.addEventListener(eName, (e) => { e.preventDefault(); dropZone.classList.add("dragging"); }); });
+    ["dragleave", "drop"].forEach((eName) => { dropZone.addEventListener(eName, (e) => { e.preventDefault(); dropZone.classList.remove("dragging"); }); });
+    dropZone.addEventListener("drop", (e) => { const file = e.dataTransfer.files?.[0]; if (file) handleFile(file); });
+
+    // === PLUGINS DO CHART.JS ===
+    Chart.defaults.color = COLORS.text;
+    Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+    const columnValueLabels = {
+      id: "columnValueLabels",
+      afterDatasetsDraw(chart, args, pluginOptions) {
+        const { ctx } = chart;
+        ctx.save();
+        ctx.font = "700 11px Inter, system-ui, sans-serif";
+        ctx.fillStyle = "#dbeafe";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+
+        chart.data.datasets.forEach((dataset, datasetIndex) => {
+          if (dataset.type === "line" || dataset.hidden) return;
+          const meta = chart.getDatasetMeta(datasetIndex);
+          if (!meta || meta.hidden) return;
+
+          meta.data.forEach((element, index) => {
+            const value = Number(dataset.data[index] || 0);
+            if (!value) return;
+            const props = element.getProps(["x", "y", "base"], true);
+            
+            if (chart.options.indexAxis === 'y') {
+               ctx.textAlign = "left";
+               ctx.textBaseline = "middle";
+               ctx.fillText(" " + formatNumber(value), props.x, props.y);
+            } else {
+               const y = Math.min(props.y, props.base) - 5;
+               ctx.fillText(formatNumber(value), props.x, y);
+            }
+          });
+        });
+        ctx.restore();
+      }
+    };
+
+    const piePercentLabels = {
+      id: "piePercentLabels",
+      afterDatasetsDraw(chart, args, pluginOptions) {
+        const type = chart.config.type;
+        if (type !== "pie" && type !== "doughnut") return;
+        const showValue = pluginOptions?.showValue === true;
+        const fontSize = pluginOptions?.fontSize || 11;
+        const color = pluginOptions?.color || "#e5edf7";
+        const background = pluginOptions?.background || "rgba(15, 27, 46, 0.78)";
+        const borderColor = pluginOptions?.borderColor || "rgba(148, 163, 184, 0.22)";
+        const datasetIndex = 0;
+        const dataset = chart.data.datasets?.[datasetIndex];
+        if (!dataset) return;
+
+        const values = (dataset.data || []).map((value) => Number(value) || 0);
+        const total = values.reduce((sum, value) => sum + value, 0);
+        if (!total) return;
+
+        const meta = chart.getDatasetMeta(datasetIndex);
+        if (!meta || meta.hidden) return;
+
+        const { ctx } = chart;
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = `700 ${fontSize}px Inter, sans-serif`;
+        ctx.fillStyle = color;
+
+        meta.data.forEach((element, index) => {
+          const value = values[index];
+          if (!value) return;
+
+          const percent = (value / total) * 100;
+          const percentText = formatPercent(percent);
+          const valueText = formatNumber(value);
+          const text = showValue ? `${valueText}\n${percentText}` : percentText;
+
+          const props = element.getProps(["x", "y", "startAngle", "endAngle", "outerRadius", "innerRadius"], true);
+          const angle = (props.startAngle + props.endAngle) / 2;
+          const labelRadius = props.innerRadius + (props.outerRadius - props.innerRadius) * 0.62;
+          const x = props.x + Math.cos(angle) * labelRadius;
+          const y = props.y + Math.sin(angle) * labelRadius;
+
+          if (percent < 2.5) return;
+
+          const lines = showValue ? text.split("\n") : [text];
+          const lineHeight = fontSize + 3;
+          const widths = lines.map((line) => ctx.measureText(line).width);
+          const boxWidth = Math.max(...widths) + 14;
+          const boxHeight = lines.length * lineHeight + 8;
+
+          ctx.save();
+          ctx.fillStyle = background; ctx.strokeStyle = borderColor; ctx.lineWidth = 1; ctx.beginPath();
+          const left = x - boxWidth / 2, top = y - boxHeight / 2, boxRadius = Math.min(10, boxHeight / 2, boxWidth / 2);
+          ctx.moveTo(left + boxRadius, top); ctx.arcTo(left + boxWidth, top, left + boxWidth, top + boxHeight, boxRadius);
+          ctx.arcTo(left + boxWidth, top + boxHeight, left, top + boxHeight, boxRadius); ctx.arcTo(left, top + boxHeight, left, top, boxRadius);
+          ctx.arcTo(left, top, left + boxWidth, top, boxRadius); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+          ctx.fillStyle = color;
+          lines.forEach((line, lineIndex) => { const offsetY = y - ((lines.length - 1) * lineHeight) / 2 + lineIndex * lineHeight; ctx.fillText(line, x, offsetY); });
+          ctx.restore();
+        });
+        ctx.restore();
+      }
+    };
+    Chart.register(columnValueLabels, piePercentLabels);
+
+    // === EXPORTAÇÃO PDF ===
+    document.getElementById("btnExport").addEventListener("click", () => {
+      for (let id in Chart.instances) {
+          Chart.instances[id].resize();
+      }
+      setTimeout(() => { window.print(); }, 300);
+    });
+
+    // === METODOS EXATOS DE MODAL ===
+    chartModalBackdrop.addEventListener("click", closeChartModal);
+    chartModalClose.addEventListener("click", closeChartModal);
+    tableModalBackdrop.addEventListener("click", closeTableModal);
+    tableModalClose.addEventListener("click", closeTableModal);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !chartModal.classList.contains("hidden")) closeChartModal();
+      if (event.key === "Escape" && !tableModal.classList.contains("hidden")) closeTableModal();
+    });
+
+    function setChartTrigger(element, chartId, title, subtitle) {
+      if (!element) return;
+      element.classList.add("chart-clickable");
+      element.dataset.chartId = chartId; element.dataset.chartTitle = title; element.dataset.chartSubtitle = subtitle || "";
+      element.setAttribute("role", "button"); element.setAttribute("tabindex", "0");
+      element.onclick = () => openChartModal(chartId, title, subtitle || "");
+      element.onkeydown = (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openChartModal(chartId, title, subtitle || ""); } };
+    }
+
+    function setTableTrigger(element, tableId, title, subtitle) {
+      if (!element) return;
+      element.classList.add("chart-clickable"); element.setAttribute("role", "button"); element.setAttribute("tabindex", "0");
+      element.onclick = () => openTableModal(tableId, title, subtitle || "");
+      element.onkeydown = (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openTableModal(tableId, title, subtitle || ""); } };
+    }
+
+    function openTableModal(tableId, title, subtitle) {
+      const sourceTable = document.getElementById(tableId);
+      if (!sourceTable) return;
+      tableModalTitle.textContent = title || "Tabela ampliada"; tableModalSubtitle.textContent = subtitle || "";
+      tableModalSlot.innerHTML = sourceTable.outerHTML;
+      tableModal.classList.remove("hidden"); tableModal.setAttribute("aria-hidden", "false"); document.body.classList.add("modal-open");
+    }
+
+    function closeTableModal() {
+      tableModal.classList.add("hidden"); tableModal.setAttribute("aria-hidden", "true");
+      tableModalSlot.innerHTML = ""; document.body.classList.remove("modal-open");
+    }
+
+    function openChartModal(chartId, title, subtitle) {
+      const sourceChart = state.charts.find((chart) => chart.canvas && chart.canvas.id === chartId);
+      if (!sourceChart) return;
+      if (state.modalFrame) { cancelAnimationFrame(state.modalFrame); state.modalFrame = null; }
+      if (state.modalChart) { state.modalChart.destroy(); state.modalChart = null; }
+
+      chartModalTitle.textContent = title || "Gráfico ampliado"; chartModalSubtitle.textContent = subtitle || "";
+      chartModal.classList.remove("hidden"); chartModal.setAttribute("aria-hidden", "false"); document.body.classList.add("modal-open");
+      if (chartModalLegend) { chartModalLegend.innerHTML = ""; chartModalLegend.setAttribute('aria-hidden', 'true'); }
+
+      const clonedData = typeof structuredClone === "function" ? structuredClone(sourceChart.data) : JSON.parse(JSON.stringify(sourceChart.data));
+      const sourceOptions = sourceChart.config && sourceChart.config.options ? sourceChart.config.options : {};
+      const clonedOptions = { ...sourceOptions, responsive: false, maintainAspectRatio: false, animation: false, layout: { padding: { top: 30, right: 24, bottom: 24, left: 24 } } };
+      const isPieLike = sourceChart.config && (sourceChart.config.type === "pie" || sourceChart.config.type === "doughnut");
+
+      const buildPieLegend = () => {
+        if (!isPieLike || !chartModalLegend) return;
+        const dataset = clonedData.datasets && clonedData.datasets[0] ? clonedData.datasets[0] : {};
+        const labels = clonedData.labels || []; const values = dataset.data || []; const colors = dataset.backgroundColor || [];
+        const total = values.reduce((sum, value) => sum + (Number(value) || 0), 0);
+
+        chartModalLegend.innerHTML = "";
+        labels.forEach((label, index) => {
+          const item = document.createElement("div"); item.className = "legend-item";
+          item.innerHTML = `<span><span class="dot" style="background:${colors[index] || '#2563eb'}"></span>${escapeHtml(String(label))}</span><strong>${formatNumber(values[index] || 0)} · ${formatPercent(total ? (Number(values[index]) || 0) / total * 100 : 0)}</strong>`;
+          item.addEventListener("mouseenter", () => {
+            if (!state.modalChart) return;
+            const active = [{ datasetIndex: 0, index: index }];
+            state.modalChart.setActiveElements(active);
+            if (state.modalChart.tooltip && typeof state.modalChart.tooltip.setActiveElements === "function") {
+              const rect = state.modalChart.canvas.getBoundingClientRect();
+              state.modalChart.tooltip.setActiveElements(active, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+            }
+            state.modalChart.update();
+          });
+          item.addEventListener("mouseleave", () => {
+            if (!state.modalChart) return; state.modalChart.setActiveElements([]);
+            if (state.modalChart.tooltip && typeof state.modalChart.tooltip.setActiveElements === "function") { state.modalChart.tooltip.setActiveElements([], { x: 0, y: 0 }); }
+            state.modalChart.update();
+          });
+          chartModalLegend.appendChild(item);
+        });
+        chartModalLegend.setAttribute("aria-hidden", "false");
+      };
+
+      const renderModalChart = () => {
+        if (state.modalChart) { state.modalChart.destroy(); state.modalChart = null; }
+        const rect = chartModalSlot.getBoundingClientRect(); const pixelRatio = window.devicePixelRatio || 1;
+        const width = Math.max(640, Math.floor(rect.width)); const height = Math.max(420, Math.floor(rect.height));
+
+        chartModalCanvas.style.width = width + "px"; chartModalCanvas.style.height = height + "px";
+        chartModalCanvas.width = Math.max(1, Math.floor(width * pixelRatio)); chartModalCanvas.height = Math.max(1, Math.floor(height * pixelRatio));
+
+        state.modalChart = new Chart(chartModalCanvas.getContext("2d"), { type: sourceChart.config.type, data: clonedData, options: clonedOptions, plugins: sourceChart.config.plugins || [] });
+        buildPieLegend();
+      };
+      requestAnimationFrame(renderModalChart);
+    }
+
+    function closeChartModal() {
+      if (state.modalFrame) { clearTimeout(state.modalFrame); state.modalFrame = null; }
+      if (chartModalLegend) { chartModalLegend.innerHTML = ''; chartModalLegend.setAttribute('aria-hidden', 'true'); }
+      chartModal.classList.add("hidden"); chartModal.setAttribute("aria-hidden", "true"); document.body.classList.remove("modal-open");
+      if (state.modalChart) { state.modalChart.destroy(); state.modalChart = null; }
+    }
+
+    // === PROCESSAMENTO DOS DADOS (WAS) ===
+    function handleFile(file) {
+      setStatus(`Processando arquivo: ${file.name}`, "default");
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const isCSV = file.name.toLowerCase().endsWith('.csv');
+          let workbook;
+          if (isCSV) workbook = XLSX.read(event.target.result, { type: 'string' });
+          else workbook = XLSX.read(new Uint8Array(event.target.result), { type: "array" });
+
+          const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
+          if (!json || !json.length) throw new Error("O ficheiro está vazio.");
+
+          const dashboardData = calculateDashboard(json);
+          renderDashboard(dashboardData, file.name);
+          setStatus(`Arquivo carregado com sucesso: ${file.name}`, "ok");
+          document.getElementById("btnExport").style.display = "inline-flex";
+        } catch (error) {
+          setStatus(error.message || "Erro ao processar o arquivo.", "error");
+          document.getElementById("dashboardEmpty").classList.remove("hidden");
+          document.getElementById("dashboardContent").classList.add("hidden");
+        }
+      };
+      reader.onerror = () => setStatus("Não foi possível ler o arquivo.", "error");
+      if (file.name.toLowerCase().endsWith('.csv')) reader.readAsText(file, "UTF-8");
+      else reader.readAsArrayBuffer(file);
+    }
+
+    function calculateDashboard(rows) {
+      const dataReferencia = new Date();
+      let total = rows.length, licensed = 0, sslCount = 0, noSslCount = 0;
+      let authMap = { recente: 0, antigo: 0, nunca: 0 };
+      let sourcesMap = {}, osMap = {};
+      let staleAssets = [];
+
+      rows.forEach(r => {
+        if (String(r.is_licensed).toLowerCase() === 'true') licensed++;
+        if (String(r.ssl_tls_enabled).toLowerCase() === 'true') sslCount++; else noSslCount++;
+
+        let os = (r.display_operating_system && String(r.display_operating_system).trim() !== "") ? String(r.display_operating_system).trim() : "Desconhecido / Não Identificado";
+        osMap[os] = (osMap[os] || 0) + 1;
+
+        if (r.last_authenticated_scan_time && r.last_authenticated_scan_time !== "") {
+          const diff = Math.abs(dataReferencia - new Date(r.last_authenticated_scan_time)) / (1000 * 60 * 60 * 24);
+          if (diff <= 30) authMap.recente++; else authMap.antigo++;
+        } else {
+          authMap.nunca++;
+        }
+
+        const srcs = String(r.sources || "Desconhecido").split(",");
+        srcs.forEach(s => { const cleanSrc = s.trim().replace(/['"]/g, ""); if (cleanSrc) sourcesMap[cleanSrc] = (sourcesMap[cleanSrc] || 0) + 1; });
+
+        let diffObserved = 0;
+        if (r.last_observed && r.last_observed !== "") {
+          diffObserved = Math.floor(Math.abs(dataReferencia - new Date(r.last_observed)) / (1000 * 60 * 60 * 24));
+        }
+        if (diffObserved > 30) {
+           staleAssets.push({...r, dias_inativo: diffObserved});
+        }
+      });
+
+      staleAssets.sort((a,b) => b.dias_inativo - a.dias_inativo);
+      const sourcesData = Object.keys(sourcesMap).map(k => ({ source: k, count: sourcesMap[k] })).sort((a,b) => b.count - a.count).slice(0, 5);
+      const osData = Object.keys(osMap).map(k => ({ os: k, count: osMap[k] })).sort((a,b) => b.count - a.count).slice(0, 10);
+
+      return { total, licensed, unLicensed: total - licensed, sslCount, noSslCount, authMap, sourcesData, osData, staleAssets, rows, dataReferencia };
+    }
+
+    function renderDashboard(data, fileName) {
+      state.charts.forEach(c => c.destroy()); state.charts = []; closeChartModal();
+      document.getElementById("dashboardEmpty").classList.add("hidden"); document.getElementById("dashboardContent").classList.remove("hidden");
+      document.getElementById("loadedInfo").textContent = `${fileName}`;
+
+      setText("valTotal", formatNumber(data.total)); setText("valLic", formatNumber(data.licensed));
+      setText("valSsl", formatNumber(data.sslCount)); setText("valAuth", formatNumber(data.authMap.recente));
+
+      renderDoughnutChart("chartLicensing", "Status de Licenciamento", ['Licenciadas', 'Não Licenciadas'], [data.licensed, data.unLicensed], [COLORS.passed, COLORS.failed]);
+      renderDoughnutChart("chartSsl", "Status de Comunicação (SSL/TLS)", ['Com SSL/TLS', 'Sem SSL/TLS'], [data.sslCount, data.noSslCount], [COLORS.blue, COLORS.purpleDark]);
+      renderPieChart("chartAuthDetailed", "Histórico de Autenticação", ['Autenticado (<30 dias)', 'Autenticado (>30 dias)', 'Sem Autenticação'], [data.authMap.recente, data.authMap.antigo, data.authMap.nunca], [COLORS.blue, COLORS.amber, COLORS.failed]);
+      renderBarChart("chartSources", "Fontes de Descoberta", data.sourcesData.map(d=>d.source), data.sourcesData.map(d=>d.count), COLORS.purple);
+      renderBarChart("chartOs", "Distribuição por SO", data.osData.map(d=>d.os), data.osData.map(d=>d.count), COLORS.passed);
+
+      renderStaleAssetsTable(data.staleAssets);
+      renderInventoryTable(data.rows, data.dataReferencia);
+    }
+
+    // Geradores de Gráficos Reutilizáveis
+    function renderDoughnutChart(canvasId, title, labels, data, colors) {
+      const ctx = document.getElementById(canvasId).getContext("2d");
+      setChartTrigger(ctx.canvas.closest(".chart-wrap"), canvasId, title, `Distribuição proporcional`);
+      const chart = new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#0d1b2e' }] },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 15, bottom: 15 } }, plugins: { legend: { position: 'bottom', labels: { color: COLORS.text } }, piePercentLabels: { showPercent: true, showValue: true, fontSize: 11, color: "#ffffff" } } } });
+      state.charts.push(chart);
+    }
+
+    function renderPieChart(canvasId, title, labels, data, colors) {
+      const ctx = document.getElementById(canvasId).getContext("2d");
+      setChartTrigger(ctx.canvas.closest(".chart-wrap"), canvasId, title, `Categorização das propriedades`);
+      const chart = new Chart(ctx, { type: 'pie', data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#0d1b2e' }] },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 15, bottom: 15 } }, plugins: { legend: { position: 'bottom', labels: { color: COLORS.text } }, piePercentLabels: { showPercent: true, showValue: false, fontSize: 11, color: "#ffffff" } } } });
+      state.charts.push(chart);
+    }
+
+    function renderBarChart(canvasId, title, labels, data, color) {
+      const ctx = document.getElementById(canvasId).getContext("2d");
+      setChartTrigger(ctx.canvas.closest(".chart-wrap"), canvasId, title, `Ranking volumétrico de registros`);
+      const chart = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Aplicações', data: data, backgroundColor: color, borderRadius: 6, maxBarThickness: 45 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { top: 15, right: 30 } }, plugins: { legend: { display: false }, columnValueLabels: true }, scales: { x: { grid: { display: false }, ticks: { display: false } }, y: { grid: { color: COLORS.grid }, ticks: { color: COLORS.text } } } } });
+      state.charts.push(chart);
+    }
+
+    // Geradores de Tabela
+    function renderStaleAssetsTable(staleAssets) {
+      const tbody = document.getElementById("staleBody");
+      tbody.innerHTML = "";
+      if(staleAssets.length === 0) {
+         tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:${COLORS.muted}">Nenhum ativo obsoleto detectado (>30 dias).</td></tr>`;
+      } else {
+         staleAssets.slice(0, 50).forEach((item) => {
+          const tr = document.createElement("tr");
+          let dt = item.last_observed ? new Date(item.last_observed).toLocaleDateString('pt-BR') : '-';
+          tr.innerHTML = `
+            <td style="font-weight:600; color: #fff;">${escapeHtml(item.name || "-")}</td>
+            <td class="numeric" style="color: ${COLORS.failed}; font-weight: 700;">${item.dias_inativo} dias</td>
+            <td>${dt}</td>
+            <td style="color:${COLORS.muted};">${escapeHtml(item.sources || "-")}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+      setTableTrigger(document.getElementById("staleTable").closest(".table-scroll"), "staleTable", "Ativos Obsoletos", "Aplicações sem observação há mais de 30 dias na rede.");
+    }
+
+    function renderInventoryTable(rows, dataReferencia) {
+      const tbody = document.getElementById("inventoryBody");
+      tbody.innerHTML = "";
+      rows.slice(0, 150).forEach((item) => {
+        const tr = document.createElement("tr");
+        const isLic = String(item.is_licensed).toLowerCase() === 'true';
+        const isSsl = String(item.ssl_tls_enabled).toLowerCase() === 'true';
+        let validAuth = false;
+        if (item.last_authenticated_scan_time) {
+          if ((dataReferencia - new Date(item.last_authenticated_scan_time)) / (1000 * 60 * 60 * 24) <= 30) validAuth = true;
+        }
+        let osLabel = item.display_operating_system ? item.display_operating_system : "Não Identificado";
+
+        tr.innerHTML = `
+          <td style="font-weight:600;">${escapeHtml(item.name || "-")}</td>
+          <td>${isLic ? '<span class="badge green">Sim</span>' : '<span class="badge red">Não</span>'}</td>
+          <td>${isSsl ? '<span class="badge green">Ativo</span>' : '<span class="badge amber">Inativo</span>'}</td>
+          <td>${validAuth ? '<span class="badge green">Recente</span>' : '<span class="badge red">Expirada / Sem</span>'}</td>
+          <td style="color:${COLORS.muted};">${escapeHtml(osLabel)}</td>`;
+        tbody.appendChild(tr);
+      });
+      setTableTrigger(document.getElementById("inventoryTable").closest(".table-scroll"), "inventoryTable", "Listagem Geral de Inventário", "Visão tabular da base completa (limitada aos 150 primeiros no modo compacto).");
+    }
+
+    // Utilitários
+    function setStatus(message, type) { fileStatus.textContent = message; fileStatus.classList.remove("ok", "error"); if (type === "ok") fileStatus.classList.add("ok"); if (type === "error") fileStatus.classList.add("error"); }
+    function setText(id, value) { document.getElementById(id).textContent = value; }
+    function formatNumber(value) { return new Intl.NumberFormat("pt-BR").format(Number(value || 0)); }
+    function formatPercent(value) { return `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Number(value || 0))}%`; }
+    function clean(value) { return value === null || value === undefined ? "" : String(value).trim(); }
+    function escapeHtml(value) { return clean(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
+  </script>
+</body>
+</html>

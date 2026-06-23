@@ -1,0 +1,1948 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Dinâmico - Arquivos de Auditoria .audit | Shield</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-2: #111827;
+      --panel: #ffffff;
+      --muted-panel: #f8fafc;
+      --text: #111827;
+      --muted: #64748b;
+      --line: #e5e7eb;
+      --brand: #2563eb;
+      --brand-dark: #1e40af;
+      --ok: #16a34a;
+      --warn: #f59e0b;
+      --danger: #dc2626;
+      --shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.28), transparent 34rem),
+        linear-gradient(135deg, #f8fafc 0%, #eef2ff 45%, #f8fafc 100%);
+      min-height: 100vh;
+      display: flex; /* Alinha sidebar e conteúdo principal lado a lado */
+    }
+
+    /* Layout Wrapper para o Conteúdo Principal */
+    .shield-app-container {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 58%, #2563eb 100%);
+      color: white;
+      padding: 34px 34px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::after {
+      content: "";
+      position: absolute;
+      width: 380px;
+      height: 380px;
+      right: -120px;
+      top: -150px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.11);
+    }
+
+    .header-content {
+      position: relative;
+ z-index: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border: 1px solid rgba(255,255,255,0.24);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.11);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 18px 0 8px;
+      font-size: clamp(28px, 4vw, 44px);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      max-width: 820px;
+      margin: 0;
+      color: #dbeafe;
+      line-height: 1.55;
+      font-size: 15px;
+    }
+
+    main {
+      max-width: 1400px;
+      width: 100%;
+      margin: -22px auto 48px;
+      padding: 0 24px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 232, 240, 0.92);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .import-card {
+      padding: 22px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .upload-zone {
+      border: 1.5px dashed #93c5fd;
+      background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+      border-radius: 16px;
+      padding: 22px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-height: 96px;
+    }
+
+    .upload-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: 24px;
+      flex: none;
+    }
+
+    .upload-zone h2 {
+      margin: 0 0 6px;
+      font-size: 18px;
+    }
+
+    .upload-zone p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--brand);
+      color: white;
+      box-shadow: 0 10px 20px rgba(37, 99, 235, 0.24);
+    }
+
+    .btn-primary:hover {
+      background: var(--brand-dark);
+    }
+
+    .btn-secondary {
+      background: #e0e7ff;
+      color: #1e3a8a;
+    }
+
+    .btn-light {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #e2e8f0;
+    }
+
+    .btn-danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .btn:disabled {
+      opacity: .48;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .mt-18 {
+      margin-top: 18px;
+    }
+
+    .info-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .info-card {
+      padding: 18px;
+      background: #fff;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+    }
+
+    .info-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .info-value {
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+
+    .info-sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .metrics-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .metric {
+      padding: 18px;
+      border-radius: var(--radius);
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+    }
+
+    .metric .num {
+      font-size: 30px;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+      margin-bottom: 4px;
+    }
+
+    .metric .label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .055em;
+    }
+
+    .metric.ok .num { color: var(--ok); }
+    .metric.warn .num { color: var(--warn); }
+    .metric.danger .num { color: var(--danger); }
+    .metric.brand .num { color: var(--brand); }
+
+    .section-card {
+      margin-top: 18px;
+      padding: 0;
+    }
+
+    .section-head {
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      justify-content: space-between;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    .section-head h2 {
+      margin: 0 0 4px;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .toolbar {
+      padding: 16px 22px;
+      display: grid;
+      grid-template-columns: 1.4fr .7fr auto auto auto;
+      gap: 12px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .field {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 14px;
+      background: white;
+      color: var(--text);
+      outline: none;
+    }
+
+    .field:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 4px rgba(96, 165, 250, .16);
+    }
+
+    .table-wrap {
+      max-height: 650px;
+      overflow: auto;
+      background: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #0f172a;
+      color: white;
+      z-index: 2;
+      padding: 12px 10px;
+      text-align: left;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    tbody td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: top;
+    }
+
+    tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    tbody tr.removed {
+      background: #fff7ed;
+      color: #7c2d12;
+    }
+
+    tbody tr.removed td {
+      opacity: .7;
+    }
+
+    .col-desc {
+      min-width: 310px;
+      max-width: 430px;
+      font-weight: 750;
+      line-height: 1.35;
+    }
+
+    .col-small {
+      min-width: 130px;
+      max-width: 170px;
+      word-break: break-word;
+    }
+
+    .col-reg {
+      min-width: 290px;
+      max-width: 400px;
+      word-break: break-word;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 12px;
+      color: #334155;
+    }
+
+    .col-reg-item {
+      min-width: 150px;
+      max-width: 220px;
+      word-break: break-word;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 12px;
+      color: #334155;
+    }
+
+    .col-impact {
+      min-width: 260px;
+      max-width: 380px;
+      line-height: 1.35;
+      color: #334155;
+    }
+
+    .select-cell {
+      width: 110px;
+      text-align: center;
+    }
+
+    .toggle {
+      width: 22px;
+      height: 22px;
+      accent-color: var(--brand);
+      cursor: pointer;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #1e40af;
+      font-weight: 850;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .empty {
+      padding: 42px 24px;
+      text-align: center;
+      color: var(--muted);
+      background: white;
+    }
+
+    .footer-actions {
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: #f8fafc;
+      border-top: 1px solid var(--line);
+    }
+
+    .note {
+      color: #475569;
+      font-size: 12px;
+      line-height: 1.45;
+      max-width: 780px;
+    }
+
+    .status {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      display: none;
+    }
+
+    .status.show {
+      display: block;
+    }
+
+    .status.ok {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+
+    .status.warn {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+    }
+
+    .status.err {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+
+    @media (max-width: 1100px) {
+      .import-card,
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .info-grid,
+      .metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .section-head,
+      .footer-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+
+    @media (max-width: 680px) {
+      header {
+        padding: 26px 18px 24px;
+      }
+
+      main {
+        padding: 0 14px;
+      }
+
+      .info-grid,
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .upload-zone {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+
+<!-- Shield UI Standardization -->
+<style id="shield-ui-standardization">
+  :root {
+    --shield-navy: #061528;
+    --shield-navy-2: #0a2444;
+    --shield-blue: #246bfe;
+    --shield-cyan: #00a8c8;
+    --shield-cyan-soft: rgba(0,168,200,.18);
+    --shield-card: rgba(255,255,255,.96);
+    --shield-card-dark: rgba(10, 24, 44, .88);
+    --shield-text: #172033;
+    --shield-muted: #64748b;
+    --shield-border: rgba(148,163,184,.22);
+    --shield-shadow: 0 20px 55px rgba(2, 8, 23, .28);
+    --shield-radius: 22px;
+    
+    /* Configurações de dimensão da Sidebar */
+    --sidebar-width-collapsed: 68px;
+    --sidebar-width-expanded: 260px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    min-height: 100vh !important;
+    background:
+      radial-gradient(circle at top left, rgba(0,168,200,.22), transparent 34rem),
+      radial-gradient(circle at top right, rgba(36,107,254,.18), transparent 28rem),
+      linear-gradient(135deg, #061528 0%, #0a2444 48%, #061528 100%) !important;
+  }
+
+  /* --- NOVA ESTRUTURA SIDEBAR PROFESSIONAL --- */
+  .shield-sidebar {
+    width: var(--sidebar-width-collapsed);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    left: 0;
+    background: rgba(6, 21, 40, 0.88);
+    backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    color: #eaf8ff;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Expansão sob o Hover */
+  .shield-sidebar:hover {
+    width: var(--sidebar-width-expanded);
+  }
+
+  /* Header Interno da Sidebar */
+  .shield-sidebar-header {
+    padding: 24px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .shield-mark {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    color: #062032;
+    background: linear-gradient(135deg, #63e6ff, #246bfe);
+    box-shadow: 0 10px 22px rgba(0,168,200,.24);
+    flex-shrink: 0;
+  }
+
+  .shield-sidebar-title {
+    font-weight: 950;
+    font-size: 16px;
+    letter-spacing: -.02em;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    background: linear-gradient(135deg, #ffffff, #bce7ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .shield-sidebar:hover .shield-sidebar-title {
+    opacity: 1;
+  }
+
+  /* Lista de Módulos (Navegação) */
+  .shield-modules-list {
+    list-style: none;
+    margin: 0;
+    padding: 16px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+  }
+
+  .shield-module-item {
+    position: relative;
+  }
+
+  .shield-module-link {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+    color: #cbd5e1;
+    text-decoration: none;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .shield-module-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .shield-module-name {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .shield-sidebar:hover .shield-module-name {
+    opacity: 1;
+  }
+
+  /* Estados Especiais: Ativo e Hover */
+  .shield-module-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+  }
+
+  .shield-module-item.active .shield-module-link {
+    background: rgba(0, 168, 200, 0.16);
+    color: #63e6ff;
+    border: 1px solid rgba(99, 230, 255, 0.25);
+  }
+
+  /* Indicador Visual do Módulo Ativo */
+  .shield-module-item.active::before {
+    content: "";
+    position: absolute;
+    left: -10px;
+    top: 15%;
+    height: 70%;
+    width: 4px;
+    background: #63e6ff;
+    border-radius: 0 4px 4px 0;
+  }
+
+  /* Footer da Sidebar */
+  .shield-sidebar-footer {
+    padding: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  /* ------------------------------------------- */
+
+  .hero, header, .hero-main {
+    background:
+      radial-gradient(circle at top right, rgba(99,230,255,.18), transparent 30%),
+      linear-gradient(135deg, #061528 0%, #0a2444 52%, #0b7790 130%) !important;
+    color: #ffffff !important;
+    box-shadow: var(--shield-shadow) !important;
+  }
+
+  .eyebrow, .badge {
+    border: 1px solid rgba(99,230,255,.28) !important;
+    background: rgba(0,168,200,.12) !important;
+    color: #dff8ff !important;
+  }
+
+  .subtitle, .hero p, header p { color: rgba(234,248,255,.84) !important; }
+
+  .upload-card, .upload-panel, .import-panel, .upload-card, .upload-zone, .status-box, .card.import-card {
+    border-radius: var(--shield-radius) !important;
+    border: 1px solid rgba(148,163,184,.22) !important;
+    box-shadow: var(--shield-shadow) !important;
+  }
+
+  input[type="file"]::file-selector-button,
+  .btn, button.btn, .file-input-wrap .btn {
+    border-radius: 13px !important;
+  }
+
+  .btn-primary, .btn, button.btn, input[type="file"]::file-selector-button {
+    background: linear-gradient(135deg, var(--shield-cyan), var(--shield-blue)) !important;
+    color: #ffffff !important;
+    border: 0 !important;
+  }
+
+  .kpi, .kpi-card, .metric, .info-card, .validation-card, .card, .panel, .pie-card, .criteria-item, .combo-panel, .info-panel {
+    border-radius: var(--shield-radius) !important;
+    border: 1px solid rgba(148,163,184,.22) !important;
+    box-shadow: 0 16px 38px rgba(2, 8, 23, .12) !important;
+  }
+
+  .card, .panel, .kpi, .kpi-card, .metric, .info-card, .validation-card, .criteria-item, .combo-panel, .info-panel {
+    background: var(--shield-card) !important;
+  }
+
+  .card-header, .panel-title, .section-head {
+    border-bottom-color: rgba(148,163,184,.22) !important;
+  }
+
+  .chart-wrap, .chart-box, .pie-canvas {
+    border: 1px solid rgba(148,163,184,.22) !important;
+    border-radius: 18px !important;
+    background:
+      radial-gradient(circle at top left, rgba(0,168,200,.10), transparent 32%),
+      linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+    padding: 12px !important;
+  }
+
+  canvas { position: relative; z-index: 1; }
+
+  table th, thead th {
+    background: linear-gradient(135deg, #061528, #0a2444) !important;
+    color: #eaf8ff !important;
+  }
+
+  .shield-empty-state-common {
+    width: min(1400px, calc(100% - 48px));
+    margin: 18px auto;
+    padding: 26px;
+    border: 1px dashed rgba(99,230,255,.38);
+    border-radius: 22px;
+    color: #d9f7ff;
+    background: rgba(255,255,255,.08);
+    text-align: center;
+    box-shadow: 0 14px 36px rgba(0,0,0,.16);
+  }
+
+  .shield-empty-state-common strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #ffffff;
+    font-size: 18px;
+  }
+
+  body.shield-ready:not(.shield-data-loaded) .kpi-grid,
+  body.shield-ready:not(.shield-data-loaded) .kpis,
+  body.shield-ready:not(.shield-data-loaded) .validation-card,
+  body.shield-ready:not(.shield-data-loaded) .criteria,
+  body.shield-ready:not(.shield-data-loaded) .charts-grid,
+  body.shield-ready:not(.shield-data-loaded) section.grid,
+  body.shield-ready:not(.shield-data-loaded) div.grid.info-grid,
+  body.shield-ready:not(.shield-data-loaded) div.grid.metrics-grid,
+  body.shield-ready:not(.shield-data-loaded) #dashboardContent,
+  body.shield-ready:not(.shield-data-loaded) #infoPanel,
+  body.shield-ready:not(.shield-data-loaded) .metrics-grid,
+  body.shield-ready:not(.shield-data-loaded) main > .footer-note,
+  body.shield-ready:not(.shield-data-loaded) main > .footer,
+  body.shield-ready:not(.shield-data-loaded) .footer-note,
+  body.shield-ready:not(.shield-data-loaded) .footer {
+    display: none !important;
+  }
+
+  body.shield-data-loaded .shield-empty-state-common { display: none !important; }
+
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    .shield-sidebar { width: 100%; height: auto; position: relative; border-right: none; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+    .shield-sidebar:hover { width: 100%; }
+    .shield-modules-list { flex-direction: row; overflow-x: auto; padding: 10px; }
+    .shield-sidebar-title, .shield-module-name { opacity: 1; }
+    .shield-module-link { padding: 8px 12px; }
+    .shield-module-item.active::before { left: 0; top: auto; bottom: -10px; width: 100%; height: 3px; border-radius: 4px 4px 0 0; }
+  }
+
+
+/* Shield PDF Export */
+.shield-pdf-export-section {
+  width: min(1400px, calc(100% - 48px));
+  margin: 26px auto 0;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid rgba(99, 230, 255, .28);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 16px 40px rgba(2, 8, 23, .16);
+  color: #172033;
+}
+
+.shield-pdf-export-text strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+  color: #061528;
+}
+
+.shield-pdf-export-text span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.shield-pdf-btn {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #00a8c8, #246bfe);
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(0, 168, 200, .22);
+  white-space: nowrap;
+}
+
+.shield-pdf-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px rgba(36, 107, 254, .26);
+}
+
+.shield-pdf-btn:disabled {
+  opacity: .68;
+  cursor: wait;
+  transform: none;
+}
+
+body.shield-ready:not(.shield-data-loaded) .shield-pdf-export-section {
+  display: none !important;
+}
+
+body.shield-exporting {
+  background: #ffffff !important;
+}
+
+body.shield-exporting .shield-pdf-ignore,
+body.shield-exporting .shield-sidebar,
+body.shield-exporting input[type="file"],
+body.shield-exporting .upload-card,
+body.shield-exporting .upload-panel,
+body.shield-exporting .import-panel,
+body.shield-exporting .import-card,
+body.shield-exporting .file-input-wrap,
+body.shield-exporting .status,
+body.shield-exporting .status-line,
+body.shield-exporting .warning,
+body.shield-exporting .notice,
+body.shield-exporting .shield-empty-state-common {
+  display: none !important;
+}
+
+body.shield-exporting .hero,
+body.shield-exporting .hero-grid,
+body.shield-exporting .hero-content,
+body.shield-exporting .hero-top {
+  grid-template-columns: 1fr !important;
+}
+
+body.shield-exporting main,
+body.shield-exporting .page,
+body.shield-exporting .container {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+body.shield-exporting .card,
+body.shield-exporting .panel,
+body.shield-exporting .kpi,
+body.shield-exporting .kpi-card,
+body.shield-exporting .metric,
+body.shield-exporting .info-card,
+body.shield-exporting .chart-wrap,
+body.shield-exporting .chart-box,
+body.shield-exporting table {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .shield-pdf-ignore,
+  .shield-sidebar,
+  .shield-pdf-export-section,
+  input[type="file"],
+  .upload-card,
+  .upload-panel,
+  .import-panel,
+  .import-card,
+  .file-input-wrap,
+  .status,
+  .status-line,
+  .warning,
+  .notice,
+  .shield-empty-state-common {
+    display: none !important;
+  }
+
+  main,
+  .page,
+  .container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 10px !important;
+  }
+
+  .hero,
+  .hero-grid,
+  .hero-content,
+  .hero-top {
+    grid-template-columns: 1fr !important;
+  }
+
+  .card,
+  .panel,
+  .kpi,
+  .kpi-card,
+  .metric,
+  .info-card,
+  .chart-wrap,
+  .chart-box,
+  table {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+@media (max-width: 760px) {
+  .shield-pdf-export-section {
+    width: min(100% - 24px, 1400px);
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .shield-pdf-btn {
+    width: 100%;
+  }
+}
+
+
+
+/* Shield PDF Export - html2canvas + jsPDF */
+.shield-pdf-status {
+  display: block;
+  min-height: 16px;
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+body.shield-exporting .shield-pdf-export-section {
+  display: none !important;
+}
+
+body.shield-exporting {
+  background: #ffffff !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body.shield-exporting .shield-pdf-ignore,
+body.shield-exporting .shield-sidebar,
+body.shield-exporting input[type="file"],
+body.shield-exporting .upload-card,
+body.shield-exporting .upload-panel,
+body.shield-exporting .import-panel,
+body.shield-exporting .import-card,
+body.shield-exporting .file-input-wrap,
+body.shield-exporting .status,
+body.shield-exporting .status-line,
+body.shield-exporting .warning,
+body.shield-exporting .notice,
+body.shield-exporting .shield-empty-state-common {
+  display: none !important;
+}
+
+body.shield-exporting .card,
+body.shield-exporting .panel,
+body.shield-exporting .kpi,
+body.shield-exporting .kpi-card,
+body.shield-exporting .metric,
+body.shield-exporting .info-card,
+body.shield-exporting .criteria-item,
+body.shield-exporting .chart-wrap,
+body.shield-exporting .chart-box,
+body.shield-exporting .table-wrap,
+body.shield-exporting .table-scroll,
+body.shield-exporting table {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+</style>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- NOVA SIDEBAR DA SUÍTE SHIELD SECURITY (7 MÓDULOS) -->
+  <nav class="shield-sidebar shield-pdf-ignore" aria-label="Navegação Shield Suite">
+    <div class="shield-sidebar-header">
+      <div class="shield-mark">🛡</div>
+      <div class="shield-sidebar-title">Shield Security</div>
+    </div>
+    
+    <ul class="shield-modules-list">
+      <!-- Módulo 1 -->
+      <li class="shield-module-item">
+        <a href="../index.html" class="shield-module-link">
+          <span class="shield-module-icon">📊</span>
+          <span class="shield-module-name">Menu Principal</span>
+        </a>
+      </li>
+      <!-- Módulo 2 (O módulo atual ativo) -->
+      <li class="shield-module-item active">
+        <a href="#" class="shield-module-link">
+          <span class="shield-module-icon">📝</span>
+          <span class="shield-module-name">Auditoria .audit (Tenable)</span>
+        </a>
+      </li>
+      <!-- Módulo 3 -->
+      <li class="shield-module-item">
+        <a href="../vulnerabilidades/index.html" class="shield-module-link">
+          <span class="shield-module-icon">🛡️</span>
+          <span class="shield-module-name">Gestão de Vulnerabilidades</span>
+        </a>
+      </li>
+      <!-- Módulo 4 -->
+      <li class="shield-module-item">
+        <a href="../endpoints/index.html" class="shield-module-link">
+          <span class="shield-module-icon">🖥️</span>
+          <span class="shield-module-name">Endpoint Central</span>
+        </a>
+      </li>
+      <!-- Módulo 5 -->
+      <li class="shield-module-item">
+        <a href="../patches/index.html" class="shield-module-link">
+          <span class="shield-module-icon">🔄</span>
+          <span class="shield-module-name">Patch Tuesday Analysis</span>
+        </a>
+      </li>
+      <!-- Módulo 6 -->
+      <li class="shield-module-item">
+        <a href="../netskope/index.html" class="shield-module-link">
+          <span class="shield-module-icon">☁️</span>
+          <span class="shield-module-name">Netskope Cloud Security</span>
+        </a>
+      </li>
+      <!-- Módulo 7 -->
+      <li class="shield-module-item">
+        <a href="../configuracoes/index.html" class="shield-module-link">
+          <span class="shield-module-icon">⚙️</span>
+          <span class="shield-module-name">Configurações Globais</span>
+        </a>
+      </li>
+    </ul>
+
+    <div class="shield-sidebar-footer">
+      <a href="javascript:history.back()" class="shield-module-link" style="padding: 8px 12px;">
+        <span class="shield-module-icon">↩️</span>
+        <span class="shield-module-name" style="font-size:12px; color:var(--shield-muted);">Voltar Tela</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- WRAPPER PARA MANTER O FLUXO DO CONTEÚDO ORIGINAL LADO A LADO COM A SIDEBAR -->
+  <div class="shield-app-container">
+    <header>
+      <div class="header-content">
+        <div class="eyebrow">Arquivo .audit • Análise • Seleção • Download</div>
+        <h1>Dashboard Dinâmico para Criação de Arquivos de Auditoria</h1>
+        <p class="subtitle">
+          Importe um arquivo <strong>.audit</strong>, revise os itens de auditoria, mantenha apenas os controles selecionados e baixe uma nova versão no mesmo formato.
+        </p>
+      </div>
+    </header>
+
+    <main>
+      <section class="card import-card">
+        <label class="upload-zone" for="auditFile">
+          <div class="upload-icon">⇧</div>
+          <div>
+            <h2>Importar arquivo .audit</h2>
+            <p>Selecione um arquivo de auditoria Tenable/Nessus. A análise é feita localmente no navegador.</p>
+          </div>
+        </label>
+
+        <div>
+          <input id="auditFile" type="file" accept=".audit,.txt,text/plain" />
+          <button class="btn btn-primary" id="selectFileBtn">Selecionar arquivo</button>
+        </div>
+      </section>
+
+      <div id="status" class="status"></div>
+
+      <section class="grid info-grid mt-18" id="infoPanel">
+        <div class="info-card">
+          <div class="info-label">Nome do arquivo</div>
+          <div class="info-value" id="fileName">Aguardando importação</div>
+          <div class="info-sub" id="fileSize">-</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Versão</div>
+          <div class="info-value" id="fileVersion">-</div>
+          <div class="info-sub" id="fileProfile">Perfil não identificado</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Tipo do arquivo</div>
+          <div class="info-value" id="fileType">.audit</div>
+          <div class="info-sub" id="fileSpecType">Aguardando análise</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Sistema operacional compatível</div>
+          <div class="info-value" id="fileOS">-</div>
+          <div class="info-sub" id="fileCheckType">-</div>
+        </div>
+      </section>
+
+      <section class="grid metrics-grid mt-18">
+        <div class="metric brand">
+          <div class="num" id="metricTotal">0</div>
+          <div class="label">Itens identificados</div>
+        </div>
+        <div class="metric ok">
+          <div class="num" id="metricSelected">0</div>
+          <div class="label">Itens mantidos</div>
+        </div>
+        <div class="metric danger">
+          <div class="num" id="metricRemoved">0</div>
+          <div class="label">Itens removidos</div>
+        </div>
+        <div class="metric warn">
+          <div class="num" id="metricRegistry">0</div>
+          <div class="label">Itens com reg_key</div>
+        </div>
+        <div class="metric">
+          <div class="num" id="metricValueTypes">0</div>
+          <div class="label">Tipos de valor</div>
+        </div>
+      </section>
+
+      <section class="card section-card">
+        <div class="section-head">
+          <div>
+            <h2>Itens de Auditoria</h2>
+            <p>O checkbox marcado mantém o item no novo arquivo. O checkbox desmarcado remove o item no download.</p>
+          </div>
+          <span class="badge" id="visibleCounter">0 itens visíveis</span>
+        </div>
+
+        <div class="toolbar">
+          <input class="field" id="searchInput" type="search" placeholder="Pesquisar por descrição, chave de registro, reg_item, impacto ou value_type..." disabled />
+          <select class="field" id="valueTypeFilter" disabled>
+            <option value="">Todos os value_type</option>
+          </select>
+          <button class="btn btn-secondary" id="selectAllBtn" disabled>Selecionar todos</button>
+          <button class="btn btn-danger" id="clearAllBtn" disabled>Remover todos</button>
+          <button class="btn btn-light" id="resetBtn" disabled>Restaurar seleção</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="col-desc">Description</th>
+                <th class="col-small">value_type</th>
+                <th class="col-small">value_data</th>
+                <th class="col-reg">reg_key</th>
+                <th class="col-reg-item">reg_item</th>
+                <th class="col-impact">Impacto</th>
+                <th class="select-cell">Manter</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr>
+                <td colspan="7" class="empty">Importe um arquivo .audit para carregar os itens de auditoria.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer-actions">
+          <div class="note">
+            Observação: quando algum item é removido, as linhas de assinatura <strong>#TRUST</strong> são retiradas da nova versão, pois o conteúdo foi alterado.
+            A tabela apresenta os principais campos técnicos de cada bloco <strong>&lt;custom_item&gt;</strong> identificado no arquivo, incluindo o impacto extraído da seção <strong>Impact:</strong>.
+          </div>
+          <button class="btn btn-primary" id="downloadBtn" disabled>Baixar nova versão .audit</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const state = {
+      file: null,
+      originalText: "",
+      items: [],
+      filteredItems: []
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    $("selectFileBtn").addEventListener("click", () => $("auditFile").click());
+    $("auditFile").addEventListener("change", handleFile);
+    $("searchInput").addEventListener("input", renderTable);
+    $("valueTypeFilter").addEventListener("change", renderTable);
+    $("selectAllBtn").addEventListener("click", () => setAll(true));
+    $("clearAllBtn").addEventListener("click", () => setAll(false));
+    $("resetBtn").addEventListener("click", resetSelection);
+    $("downloadBtn").addEventListener("click", downloadSelectedAudit);
+
+    function handleFile(event) {
+      const file = event.target.files && event.target.files[0];
+
+      if (!file) return;
+
+      if (!file.name.toLowerCase().endsWith(".audit")) {
+        showStatus("warn", "O arquivo selecionado não possui extensão .audit. A análise continuará, mas valide o conteúdo antes de usar.");
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        try {
+          const rawText = String(reader.result || "");
+          const normalizedText = rawText.replace(/\r\n/g, "\n");
+          state.file = file;
+          state.originalText = normalizedText;
+          state.items = parseAuditItems(normalizedText);
+          state.filteredItems = [...state.items];
+
+          updateInfoPanel(file, normalizedText);
+          updateMetrics();
+          populateFilters();
+          enableControls(true);
+          renderTable();
+
+          if (state.items.length === 0) {
+            showStatus("warn", "Arquivo importado, mas nenhum bloco <custom_item> foi identificado.");
+          } else {
+            showStatus("ok", `Arquivo importado com sucesso. ${state.items.length} itens de auditoria foram identificados.`);
+          }
+        } catch (error) {
+          console.error(error);
+          showStatus("err", "Não foi possível processar o arquivo. Verifique se o conteúdo está em formato .audit válido.");
+        }
+      };
+
+      reader.onerror = () => showStatus("err", "Falha ao ler o arquivo selecionado.");
+      reader.readAsText(file);
+    }
+
+    function parseAuditItems(text) {
+      const regex = /<custom_item\b[^>]*>[\s\S]*?<\/custom_item>/gi;
+      const items = [];
+      let match;
+      let index = 0;
+
+      while ((match = regex.exec(text)) !== null) {
+        const raw = match[0];
+        const description = clean(extractField(raw, "description")) || `Item ${index + 1}`;
+        const valueType = clean(extractField(raw, "value_type")) || "Não informado";
+        const valueData = clean(extractField(raw, "value_data")) || "Não informado";
+        const regKey = clean(extractField(raw, "reg_key")) || "Não informado";
+        const regItem = clean(extractField(raw, "reg_item")) || "Não informado";
+        const impactOriginal = extractImpact(raw);
+        const impactPt = translateImpact(impactOriginal);
+
+        items.push({
+          id: index + 1,
+          start: match.index,
+          end: regex.lastIndex,
+          raw,
+          selected: true,
+          description,
+          valueType,
+          valueData,
+          regKey,
+          regItem,
+          impactOriginal,
+          impactPt,
+          searchText: normalizeSearch(`${description} ${valueType} ${valueData} ${regKey} ${regItem} ${impactOriginal} ${impactPt}`)
+        });
+
+        index += 1;
+      }
+
+      return items;
+    }
+
+    function extractField(block, key) {
+      const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const quoted = new RegExp("^\\s*" + escaped + "\\s*:\\s*\"([\\s\\S]*?)\"\\s*(?=\\n\\s*[A-Za-z_]+\\s*:|\\n\\s*<\\/custom_item>)", "im");
+      const q = block.match(quoted);
+
+      if (q) return q[1];
+
+      const unquoted = new RegExp("^\\s*" + escaped + "\\s*:\\s*([^\\n\\r]+)", "im");
+      const u = block.match(unquoted);
+      return u ? u[1] : "";
+    }
+
+    function extractImpact(block) {
+      const solution = extractField(block, "solution") || "";
+      const info = extractField(block, "info") || "";
+      const source = `${solution}\n${info}`;
+      const impactMatch = source.match(/(^|\n)\s*Impact\s*:\s*([^\n\r]*)/i);
+
+      if (!impactMatch) return "";
+
+      const afterTitle = source.slice(impactMatch.index + impactMatch[0].length);
+      const lines = [];
+
+      const inlineText = clean(impactMatch[2] || "");
+      if (inlineText) lines.push(inlineText);
+
+      let started = Boolean(inlineText);
+
+      for (const line of afterTitle.split(/\n/)) {
+        const current = clean(line);
+
+        if (!current && !started) {
+          continue;
+        }
+
+        if (!current && started) {
+          break;
+        }
+
+        if (/^(Default Value|Rationale|Audit|Remediation|References?|See Also|Additional Information|CIS Controls)\s*:/i.test(current)) {
+          break;
+        }
+
+        started = true;
+        lines.push(current);
+
+        if (lines.length >= 3) {
+          break;
+        }
+      }
+
+      return clean(lines.join(" ")).replace(/^["']|["']$/g, "");
+    }
+
+    function translateImpact(text) {
+      if (!text) return "Não informado";
+
+      const normalized = clean(text);
+
+      const exact = new Map([
+        ["Users will not be able to utilize the camera on a system.", "Os usuários não poderão utilizar a câmera no sistema."],
+        ["Windows experiences that use the cloud optimized content client component, will present the default fallback content instead of customized content.", "As experiências do Windows que usam o componente de conteúdo otimizado em nuvem apresentarão o conteúdo padrão de contingência em vez de conteúdo personalizado."],
+        ["The Connected User Experience and Telemetry service will be blocked from automatically using an authenticated proxy.", "O serviço Experiências do Usuário Conectado e Telemetria será impedido de usar automaticamente um proxy autenticado."],
+        ["Diagnostic logs and information such as crash dumps will not be collected for transmission to Microsoft.", "Logs de diagnóstico e informações, como despejos de falha, não serão coletados para transmissão à Microsoft."],
+        ["Windows Error Reporting is limited to sending kernel mini and user mode triage memory dumps, reducing the risk of sending sensitive information to Microsoft.", "O Relatório de Erros do Windows ficará limitado ao envio de minidespejos de kernel e despejos de triagem do modo usuário, reduzindo o risco de envio de informações sensíveis à Microsoft."]
+      ]);
+
+      if (exact.has(normalized)) return exact.get(normalized);
+
+      let translated = normalized;
+
+      const rules = [
+        [/Users will not be able to/gi, "Os usuários não poderão"],
+        [/Users will not have access to/gi, "Os usuários não terão acesso a"],
+        [/Users will not have the ability to/gi, "Os usuários não terão a capacidade de"],
+        [/Users will be able to/gi, "Os usuários poderão"],
+        [/Users can/gi, "Os usuários podem"],
+        [/User will/gi, "O usuário irá"],
+        [/The system will/gi, "O sistema irá"],
+        [/Windows will/gi, "O Windows irá"],
+        [/will not be collected/gi, "não serão coletados"],
+        [/will not be sent/gi, "não serão enviados"],
+        [/will not be available/gi, "não estará disponível"],
+        [/will not be able to/gi, "não poderá"],
+        [/will not have access to/gi, "não terá acesso a"],
+        [/will not have the ability to/gi, "não terá a capacidade de"],
+        [/will be blocked from/gi, "será impedido de"],
+        [/will be prevented from/gi, "será impedido de"],
+        [/will be limited to/gi, "será limitado a"],
+        [/will be disabled/gi, "será desabilitado"],
+        [/will be enabled/gi, "será habilitado"],
+        [/will be required/gi, "será exigido"],
+        [/will be allowed/gi, "será permitido"],
+        [/will be denied/gi, "será negado"],
+        [/will present/gi, "apresentará"],
+        [/will reduce/gi, "reduzirá"],
+        [/will increase/gi, "aumentará"],
+        [/will prevent/gi, "impedirá"],
+        [/will require/gi, "exigirá"],
+        [/will no longer/gi, "não irá mais"],
+        [/are not/gi, "não são"],
+        [/is not/gi, "não é"],
+        [/cannot/gi, "não pode"],
+        [/not be/gi, "não ser"],
+        [/able to/gi, "capaz de"],
+        [/access to/gi, "acesso a"],
+        [/camera/gi, "câmera"],
+        [/system/gi, "sistema"],
+        [/machine/gi, "máquina"],
+        [/device/gi, "dispositivo"],
+        [/devices/gi, "dispositivos"],
+        [/service/gi, "serviço"],
+        [/services/gi, "serviços"],
+        [/setting/gi, "configuração"],
+        [/settings/gi, "configurações"],
+        [/policy/gi, "política"],
+        [/policies/gi, "políticas"],
+        [/application/gi, "aplicativo"],
+        [/applications/gi, "aplicativos"],
+        [/command line/gi, "linha de comando"],
+        [/cloud/gi, "nuvem"],
+        [/content/gi, "conteúdo"],
+        [/default/gi, "padrão"],
+        [/customized/gi, "personalizado"],
+        [/information/gi, "informações"],
+        [/sensitive information/gi, "informações sensíveis"],
+        [/diagnostic logs/gi, "logs de diagnóstico"],
+        [/crash dumps/gi, "despejos de falha"],
+        [/memory dumps/gi, "despejos de memória"],
+        [/transmission/gi, "transmissão"],
+        [/Microsoft/gi, "Microsoft"],
+        [/authenticated proxy/gi, "proxy autenticado"],
+        [/install/gi, "instalar"],
+        [/upgrade/gi, "atualizar"],
+        [/remove/gi, "remover"],
+        [/configure/gi, "configurar"],
+        [/discover/gi, "descobrir"],
+        [/distribute/gi, "distribuir"],
+        [/risk/gi, "risco"],
+        [/security/gi, "segurança"],
+        [/privacy/gi, "privacidade"],
+        [/data/gi, "dados"],
+        [/password/gi, "senha"],
+        [/account/gi, "conta"],
+        [/accounts/gi, "contas"],
+        [/administrator/gi, "administrador"],
+        [/administrators/gi, "administradores"],
+        [/local/gi, "local"],
+        [/remote/gi, "remoto"],
+        [/network/gi, "rede"],
+        [/firewall/gi, "firewall"],
+        [/enabled/gi, "habilitado"],
+        [/disabled/gi, "desabilitado"],
+        [/required/gi, "exigido"],
+        [/allowed/gi, "permitido"],
+        [/blocked/gi, "bloqueado"],
+        [/sent/gi, "enviado"],
+        [/collected/gi, "coletado"],
+        [/instead of/gi, "em vez de"]
+      ];
+
+      for (const [pattern, replacement] of rules) {
+        translated = translated.replace(pattern, replacement);
+      }
+
+      return translated;
+    }
+
+
+    function updateInfoPanel(file, text) {
+      const version =
+        tagValue(text, "version") ||
+        regexValue(text, /\$Revision:\s*([^$]+?)\s*\$/i) ||
+        "Não identificado";
+
+      const specType = tagValue(text, "type") || "Não identificado";
+      const profile = tagValue(text, "profile") || "Perfil não identificado";
+      const specName = tagValue(text, "name") || inferOSFromCheckType(text) || "Não identificado";
+      const checkType = regexValue(text, /<check_type:"([^"]+)"\s+version:"([^"]+)">/i);
+      const labels = tagValue(text, "labels");
+
+      $("fileName").textContent = file.name;
+      $("fileSize").textContent = formatBytes(file.size);
+      $("fileVersion").textContent = version;
+      $("fileProfile").textContent = profile;
+      $("fileType").textContent = ".audit";
+      $("fileSpecType").textContent = specType;
+      $("fileOS").textContent = specName;
+      $("fileCheckType").textContent = checkType ? `check_type: ${checkType}${labels ? " • labels: " + labels : ""}` : (labels || "-");
+    }
+
+    function tagValue(text, tag) {
+      const escaped = tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`<${escaped}>([\\s\\S]*?)<\\/${escaped}>`, "i");
+      const match = text.match(regex);
+      return match ? clean(match[1]) : "";
+    }
+
+    function regexValue(text, regex) {
+      const match = text.match(regex);
+      if (!match) return "";
+      if (match.length >= 3) return `${match[1]} v${match[2]}`;
+      return clean(match[1]);
+    }
+
+    function inferOSFromCheckType(text) {
+      const check = regexValue(text, /<check_type:"([^"]+)"\s+version:"([^"]+)">/i);
+      return check || "";
+    }
+
+    function updateMetrics() {
+      const total = state.items.length;
+      const selected = state.items.filter(item => item.selected).length;
+      const removed = total - selected;
+      const registry = state.items.filter(item => item.regKey && item.regKey !== "Não informado").length;
+      const valueTypes = new Set(state.items.map(item => item.valueType).filter(Boolean)).size;
+
+      $("metricTotal").textContent = total;
+      $("metricSelected").textContent = selected;
+      $("metricRemoved").textContent = removed;
+      $("metricRegistry").textContent = registry;
+      $("metricValueTypes").textContent = valueTypes;
+    }
+
+    function populateFilters() {
+      const select = $("valueTypeFilter");
+      const current = select.value;
+      const types = [...new Set(state.items.map(item => item.valueType).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+      select.innerHTML = '<option value="">Todos os value_type</option>';
+
+      for (const type of types) {
+        const option = document.createElement("option");
+        option.value = type;
+        option.textContent = type;
+        select.appendChild(option);
+      }
+
+      select.value = current && types.includes(current) ? current : "";
+    }
+
+    function renderTable() {
+      const tbody = $("tableBody");
+      const query = normalizeSearch($("searchInput").value || "");
+      const valueType = $("valueTypeFilter").value;
+
+      const filtered = state.items.filter(item => {
+        const matchQuery = !query || item.searchText.includes(query);
+        const matchType = !valueType || item.valueType === valueType;
+        return matchQuery && matchType;
+      });
+
+      state.filteredItems = filtered;
+      $("visibleCounter").textContent = `${filtered.length} itens visíveis`;
+
+      tbody.innerHTML = "";
+
+      if (!state.file) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">Importe um arquivo .audit para carregar os itens de auditoria.</td></tr>';
+        return;
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum item encontrado com os filtros atuais.</td></tr>';
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+
+      for (const item of filtered) {
+        const row = document.createElement("tr");
+        row.className = item.selected ? "" : "removed";
+
+        row.appendChild(cell(item.description, "col-desc", item.description));
+        row.appendChild(cell(item.valueType, "col-small", item.valueType));
+        row.appendChild(cell(item.valueData, "col-small", item.valueData));
+        row.appendChild(cell(item.regKey, "col-reg", item.regKey));
+        row.appendChild(cell(item.regItem, "col-reg-item", item.regItem));
+        row.appendChild(cell(item.impactPt, "col-impact", item.impactOriginal || item.impactPt));
+
+        const selectCell = document.createElement("td");
+        selectCell.className = "select-cell";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "toggle";
+        checkbox.checked = item.selected;
+        checkbox.setAttribute("aria-label", `Manter item ${item.id}`);
+        checkbox.addEventListener("change", () => {
+          item.selected = checkbox.checked;
+          updateMetrics();
+          row.className = item.selected ? "" : "removed";
+        });
+        selectCell.appendChild(checkbox);
+        row.appendChild(selectCell);
+
+        fragment.appendChild(row);
+      }
+
+      tbody.appendChild(fragment);
+    }
+
+    function cell(value, className, title) {
+      const td = document.createElement("td");
+      td.className = className;
+      td.textContent = value || "Não informado";
+      if (title) td.title = title;
+      return td;
+    }
+
+    function setAll(selected) {
+      for (const item of state.items) {
+        item.selected = selected;
+      }
+      updateMetrics();
+      renderTable();
+    }
+
+    function resetSelection() {
+      setAll(true);
+    }
+
+    function downloadSelectedAudit() {
+      if (!state.file || !state.originalText) return;
+
+      const removedItems = state.items.filter(item => !item.selected).sort((a, b) => b.start - a.start);
+      let output = state.originalText;
+
+      for (const item of removedItems) {
+        output = output.slice(0, item.start) + output.slice(item.end);
+      }
+
+      if (removedItems.length > 0) {
+        output = output.replace(/^#TRUST(?:-RSA-SHA256)?[^\n]*\n?/gmi, "");
+        output =
+          "# Arquivo .audit gerado pelo Dashboard Dinamico de Auditoria\n" +
+          "# Observacao: assinaturas #TRUST removidas porque o conteudo foi alterado.\n" +
+          output;
+      }
+
+      const baseName = state.file.name.replace(/\.audit$/i, "");
+      const fileName = `${baseName}_selecionado.audit`;
+      const blob = new Blob([output], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+
+      anchor.href = url;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+
+      showStatus("ok", `Nova versão gerada: ${fileName}. Itens mantidos: ${state.items.filter(i => i.selected).length}. Itens removidos: ${removedItems.length}.`);
+    }
+
+    function enableControls(enabled) {
+      $("searchInput").disabled = !enabled;
+      $("valueTypeFilter").disabled = !enabled;
+      $("selectAllBtn").disabled = !enabled;
+      $("clearAllBtn").disabled = !enabled;
+      $("resetBtn").disabled = !enabled;
+      $("downloadBtn").disabled = !enabled;
+    }
+
+    function showStatus(type, message) {
+      const status = $("status");
+      status.className = `status show ${type}`;
+      status.textContent = message;
+    }
+
+    function clean(value) {
+      return String(value || "")
+        .replace(/\r/g, "")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+
+    function normalizeSearch(value) {
+      return clean(value)
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes)) return "-";
+      const units = ["B", "KB", "MB", "GB"];
+      let size = bytes;
+      let unit = 0;
+
+      while (size >= 1024 && unit < units.length - 1) {
+        size /= 1024;
+        unit += 1;
+      }
+
+      return `${size.toFixed(size >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
+    }
+  </script>
+
+<!-- Shield UI Behavior -->
+<script id="shield-ui-behavior">
+(function(){
+  function ready(fn){
+    if(document.readyState !== 'loading') fn();
+    else document.addEventListener('DOMContentLoaded', fn);
+  }
+
+  ready(function(){
+    document.body.classList.add('shield-ready');
+
+    if(!document.getElementById('dashboardEmpty') && !document.querySelector('.shield-empty-state-common')){
+      const importTarget = document.querySelector('.upload-card, .import-panel, .card.import-card, .upload-panel, .upload-zone, header, .hero');
+      const empty = document.createElement('section');
+      empty.className = 'shield-empty-state-common';
+      empty.innerHTML = '<strong>Aguardando importação do arquivo</strong>Os indicadores, gráficos e tabelas serão exibidos somente após selecionar o arquivo de dados.';
+      if(importTarget){
+        const heroParent = importTarget.closest('header, .hero');
+        const anchor = heroParent || importTarget;
+        if(anchor.parentElement){
+          anchor.parentElement.insertBefore(empty, anchor.nextSibling);
+        } else {
+          document.body.insertBefore(empty, document.body.firstChild.nextSibling);
+        }
+      } else {
+        document.body.insertBefore(empty, document.body.firstChild.nextSibling);
+      }
+    }
+
+    const inputs = Array.from(document.querySelectorAll('input[type="file"]'));
+    inputs.forEach(function(input){
+      input.addEventListener('change', function(){
+        if(input.files && input.files.length){
+          setTimeout(function(){ document.body.classList.add('shield-data-loaded'); }, 350);
+        }
+      });
+    });
+
+    if(window.Chart){
+      Chart.defaults.color = '#172033';
+      Chart.defaults.font.family = 'Inter, Segoe UI, Roboto, Arial, sans-serif';
+      Chart.defaults.elements.bar.borderRadius = 10;
+      Chart.defaults.elements.bar.borderSkipped = false;
+      if(Chart.defaults.plugins && Chart.defaults.plugins.tooltip){
+        Chart.defaults.plugins.tooltip.backgroundColor = '#061528';
+        Chart.defaults.plugins.tooltip.titleColor = '#ffffff';
+        Chart.defaults.plugins.tooltip.bodyColor = '#eaf8ff';
+        Chart.defaults.plugins.tooltip.cornerRadius = 12;
+        Chart.defaults.plugins.tooltip.padding = 12;
+      }
+    }
+  });
+})();
+</script>
+
+
+<!-- Shield PDF Export - html2canvas + jsPDF -->
+<script id="shield-pdf-export">
+(function(){
+  function ready(fn){
+    if(document.readyState !== 'loading') fn();
+    else document.addEventListener('DOMContentLoaded', fn);
+  }
+
+  function slugify(value){
+    return String(value || 'dashboard-tenable-shield')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .toLowerCase() || 'dashboard-tenable-shield';
+  }
+
+  function wait(ms){
+    return new Promise(function(resolve){ setTimeout(resolve, ms); });
+  }
+
+  function ensureExportSection(){
+    var main = document.querySelector('main') || document.body;
+    if(document.getElementById('shieldPdfExportSection')) return;
+
+    var section = document.createElement('section');
+    section.id = 'shieldPdfExportSection';
+    section.className = 'shield-pdf-export-section shield-pdf-ignore';
+    section.setAttribute('aria-label', 'Exportar dashboard em PDF');
+    section.innerHTML = [
+      '<div class="shield-pdf-export-text">',
+      '<strong>Exportar Dashboard</strong>',
+      '<span>Gere uma cópia em PDF com os indicadores, gráficos e tabelas exibidos na tela.</span>',
+      '<span id="shieldPdfStatus" class="shield-pdf-status"></span>',
+      '</div>',
+      '<button type="button" id="shieldPdfExportBtn" class="shield-pdf-btn">Baixar dashboard em PDF</button>'
+    ].join('');
+    main.appendChild(section);
+  }
+
+  async function exportDashboardPdf(){
+    var button = document.getElementById('shieldPdfExportBtn');
+    var status = document.getElementById('shieldPdfStatus');
+    if(!button) return;
+
+    if(!window.html2canvas || !window.jspdf || !window.jspdf.jsPDF){
+      if(status) status.textContent = 'Bibliotecas de PDF não carregadas. Verifique a conexão com a internet e tente novamente.';
+      return;
+    }
+
+    var originalText = button.textContent;
+    var originalScrollY = window.scrollY || 0;
+    var bodyStyle = window.getComputedStyle(document.body);
+    var backgroundColor = bodyStyle.backgroundColor && bodyStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' ? bodyStyle.backgroundColor : '#ffffff';
+
+    button.disabled = true;
+    button.textContent = 'Gerando PDF...';
+    if(status) status.textContent = 'Preparando captura do dashboard...';
+    document.body.classList.add('shield-exporting');
+    window.scrollTo(0, 0);
+
+    try {
+      await wait(350);
+
+      var pageWidthPx = Math.max(
+        document.documentElement.scrollWidth,
+        document.body.scrollWidth,
+        document.documentElement.clientWidth
+      );
+      var pageHeightPx = Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight,
+        document.documentElement.clientHeight
+      );
+
+      var canvas = await window.html2canvas(document.body, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: backgroundColor,
+        width: pageWidthPx,
+        height: pageHeightPx,
+        windowWidth: pageWidthPx,
+        windowHeight: pageHeightPx,
+        scrollX: 0,
+        scrollY: 0,
+        logging: false
+      });
+
+      var imgData = canvas.toDataURL('image/png', 1.0);
+      var jsPDF = window.jspdf.jsPDF;
+      var pdf = new jsPDF('p', 'mm', 'a4');
+      var pageWidth = pdf.internal.pageSize.getWidth();
+      var pageHeight = pdf.internal.pageSize.getHeight();
+      var margin = 8;
+      var imgWidth = pageWidth - margin * 2;
+      var imgHeight = (canvas.height * imgWidth) / canvas.width;
+      var usableHeight = pageHeight - margin * 2;
+
+      var remainingHeight = imgHeight;
+      var position = margin;
+      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+      remainingHeight -= usableHeight;
+
+      while(remainingHeight > 0){
+        pdf.addPage();
+        position = margin - (imgHeight - remainingHeight);
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+        remainingHeight -= usableHeight;
+      }
+
+      var date = new Date().toISOString().slice(0, 10);
+      var filename = slugify(document.title || (document.querySelector('h1') && document.querySelector('h1').textContent) || 'dashboard-tenable-shield') + '_' + date + '.pdf';
+      pdf.save(filename);
+      if(status) status.textContent = 'PDF gerado com sucesso.';
+    } catch(error){
+      console.error(error);
+      if(status) status.textContent = 'Não foi possível gerar o PDF automaticamente. Use Ctrl+P e selecione Salvar como PDF como alternativa.';
+    } finally {
+      document.body.classList.remove('shield-exporting');
+      window.scrollTo(0, originalScrollY);
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
+
+  ready(function(){
+    ensureExportSection();
+    var button = document.getElementById('shieldPdfExportBtn');
+    if(button) button.addEventListener('click', exportDashboardPdf);
+  });
+})();
+</script>
+
+</body>
+</html>

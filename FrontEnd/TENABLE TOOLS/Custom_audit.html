@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Dinâmico - Arquivos de Auditoria .audit | Tenable</title>
+  <style>
+    :root {
+      --bg-primary: #07111f;
+      --bg-secondary: #0d1b2e;
+      --bg-card: rgba(15, 27, 46, 0.92);
+      --bg-card-soft: rgba(20, 37, 62, 0.9);
+      --line: rgba(148, 163, 184, 0.18);
+      --text: #e5edf7;
+      --muted: #8fa4bd;
+      --accent: #22d3ee;
+      --blue: #38bdf8;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --purple: #a78bfa;
+      --shadow: 0 18px 55px rgba(0, 0, 0, 0.38);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(34, 211, 238, 0.18), transparent 34%),
+        radial-gradient(circle at top right, rgba(139, 92, 246, 0.16), transparent 30%),
+        linear-gradient(135deg, var(--bg-primary), #101827 58%, #06101e);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* --- MENU SUPERIOR (TOP NAV) PROFISSIONAL --- */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      width: 100%;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: rgba(11, 20, 36, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      flex: 1; 
+    }
+
+    .nav-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex: 1;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+    }
+
+    .nav-logo img {
+      height: 42px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 12px rgba(34, 211, 238, 0.15));
+    }
+
+    .nav-menu {
+      display: flex;
+      height: 76px;
+      gap: 6px;
+    }
+
+    .nav-item {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px; /* Espaço entre o ícone e o texto */
+      padding: 0 14px;
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.2s, background 0.2s;
+    }
+
+    .nav-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-item::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 16px;
+      right: 16px;
+      height: 3px;
+      background: var(--accent);
+      border-radius: 4px 4px 0 0;
+      opacity: 0;
+      transition: 0.2s;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .nav-item:hover::after, .nav-item.active::after {
+      opacity: 1;
+    }
+
+    /* Estilo do Dropdown */
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 200px;
+      background: rgba(15, 27, 46, 0.98);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-top: none;
+      border-radius: 0 0 14px 14px;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(10px);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .dropdown-menu::before {
+      content: "";
+      position: absolute;
+      top: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .nav-item:hover .dropdown-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .dropdown-item {
+      padding: 10px 14px;
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      text-transform: none;
+      letter-spacing: normal;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .dropdown-item:hover, .dropdown-item.active {
+      background: rgba(34, 211, 238, 0.12);
+      color: var(--accent);
+    }
+
+    .home-btn {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.4);
+      transition: all 0.2s ease;
+      text-decoration: none;
+      --pld-icon-strokeWidth: 1.5;
+    }
+
+    .home-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .home-btn:hover {
+      color: #fff;
+      border-color: var(--accent);
+      background: rgba(34, 211, 238, 0.1);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2);
+      transform: translateY(-1px);
+    }
+    /* ------------------------------------------- */
+
+    .app-shell {
+      width: 100%;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .content-shell {
+      width: 100%;
+      max-width: 1540px;
+      margin: 0 auto;
+      padding: 30px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 30px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 28px;
+      background:
+        linear-gradient(135deg, rgba(15, 27, 46, 0.96), rgba(13, 27, 46, 0.76)),
+        linear-gradient(90deg, rgba(34, 211, 238, 0.12), rgba(139, 92, 246, 0.12));
+      box-shadow: var(--shadow);
+    }
+
+    .hero-content {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1.4fr 0.85fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(34, 211, 238, 0.26);
+      color: #b6f1ff;
+      background: rgba(34, 211, 238, 0.09);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .h1-title {
+      margin: 0;
+      font-size: 30px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .subtitle {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.55;
+      max-width: 920px;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: -60px -90px auto auto;
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.28), transparent 68%);
+      filter: blur(2px);
+    }
+
+    .upload-panel {
+      border: 1px dashed rgba(34, 211, 238, 0.38);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(20, 37, 62, 0.92), rgba(15, 27, 46, 0.86));
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-height: 230px;
+      justify-content: center;
+      transition: all 0.18s ease;
+    }
+
+    .upload-panel:hover {
+      border-color: rgba(34, 211, 238, 0.95);
+      background: rgba(34, 211, 238, 0.12);
+    }
+
+    .upload-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+    }
+    
+    .upload-hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .upload-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .file-input-wrap {
+      position: relative;
+      display: inline-flex;
+      width: fit-content;
+    }
+
+    .file-input-wrap input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 20px;
+      color: #06101e;
+      background: linear-gradient(135deg, var(--accent), #60a5fa);
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(34, 211, 238, 0.22);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 34px rgba(34, 211, 238, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: rgba(148, 163, 184, 0.2);
+      color: var(--muted);
+      box-shadow: none;
+    }
+
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 12px;
+      padding: 11px 20px;
+      color: #e5edf7;
+      background: rgba(15, 23, 42, 0.4);
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-outline:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(148, 163, 184, 0.5);
+      transform: translateY(-1px);
+    }
+    
+    .btn-outline:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-danger-outline {
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+    .btn-danger-outline:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: #ef4444;
+    }
+
+    .status {
+      min-height: 22px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .status.ok { color: #86efac; }
+    .status.warn { color: #fde68a; }
+    .status.err { color: #fca5a5; }
+
+    .page {
+      width: 100%;
+      margin: 0 auto;
+      padding: 22px 0;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(150px, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .kpi {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2);
+      min-height: 108px;
+    }
+
+    .kpi .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.055em;
+    }
+
+    .kpi .value {
+      font-size: 32px;
+      font-weight: 900;
+      margin: 10px 0 4px;
+      letter-spacing: -0.04em;
+      color: #fff;
+    }
+
+    .kpi.accent { border-top: 4px solid var(--accent); }
+    .kpi.green { border-top: 4px solid var(--green); }
+    .kpi.red { border-top: 4px solid var(--red); }
+    .kpi.yellow { border-top: 4px solid var(--yellow); }
+    .kpi.purple { border-top: 4px solid var(--purple); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.2);
+      padding: 18px;
+    }
+
+    .card.full { grid-column: span 12; }
+    .card.span-3 { grid-column: span 3; }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .card h2 {
+      font-size: 17px;
+      line-height: 1.25;
+      margin: 0 0 4px;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .info-title {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin: 0 0 8px 0;
+    }
+
+    .info-val {
+      font-size: 18px;
+      font-weight: 900;
+      color: #fff;
+      margin: 0 0 4px 0;
+      word-break: break-word;
+      line-height: 1.2;
+    }
+
+    .info-sub {
+      color: var(--muted);
+      font-size: 12.5px;
+      margin: 0;
+    }
+
+    .control-grid {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 14px;
+      padding-bottom: 18px;
+    }
+
+    .field {
+      flex: 1 1 200px;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: rgba(15, 23, 42, 0.55);
+      color: var(--text);
+      outline: none;
+      transition: 0.2s ease;
+    }
+    
+    .field input:focus, .field select:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.2);
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      max-height: 520px;
+      background: linear-gradient(180deg, rgba(15, 27, 46, 0.98), rgba(13, 27, 46, 0.95));
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      font-size: 12.5px;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: rgba(15, 27, 46, 0.98);
+      color: #c7f9ff;
+      text-align: left;
+      padding: 12px 11px;
+      white-space: nowrap;
+      font-weight: 850;
+      z-index: 1;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    td {
+      padding: 12px 11px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      color: var(--text);
+      vertical-align: top;
+    }
+
+    tr:hover td {
+      background: rgba(56, 189, 248, 0.08);
+    }
+    
+    tr.removed td {
+      opacity: 0.6;
+      background: rgba(239, 68, 68, 0.08);
+      color: #fca5a5;
+    }
+
+    .col-desc { min-width: 250px; max-width: 350px; font-weight: 700; line-height: 1.4; }
+    .col-small { min-width: 120px; max-width: 150px; word-break: break-word; }
+    .col-reg { min-width: 250px; max-width: 350px; word-break: break-word; font-family: monospace; color: #94a3b8; }
+    .col-reg-item { min-width: 150px; max-width: 200px; word-break: break-word; font-family: monospace; color: #94a3b8; }
+    .col-impact { min-width: 220px; max-width: 320px; line-height: 1.4; color: #cbd5e1; }
+    
+    .select-cell { width: 80px; text-align: center; vertical-align: middle; }
+    
+    .toggle {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .pill.neutral {
+      color: #e2e8f0;
+      background: rgba(148, 163, 184, 0.12);
+      border-color: rgba(148, 163, 184, 0.22);
+    }
+
+    .empty-state {
+      padding: 36px 28px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 1100px) {
+      .top-nav { padding: 0 16px; overflow-x: auto; gap: 24px; justify-content: flex-start;}
+      .nav-left { flex: 0 0 auto; }
+      .nav-center { flex: 1 0 auto; }
+      .nav-right { flex: 0 0 auto; margin-left: auto; }
+      .kpis { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+      .card.span-3 { grid-column: span 6; }
+    }
+
+    @media (max-width: 760px) {
+      .hero-content { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: 1fr; }
+      .card.span-3 { grid-column: span 12; }
+      .control-grid { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+
+<body>
+  
+<header class="top-nav">
+    <div class="nav-left">
+      <a href="../index.html" class="nav-logo">
+        <img src="../images/logo-shield-header.png" alt="Logo Shield" />
+      </a>
+    </div>
+
+    <div class="nav-center">
+      <nav class="nav-menu">
+        
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M14.502 5.999a2.5 2.5 0 1 1 0-3.997M11 2.5H3a1.5 1.5 0 1 0 0 3h8M1.85 5l3.983 5.586M8.694 9.43 5.891 5.5M8 11.995v.01m-2.5-.174a2.5 2.5 0 0 1 5 0v.669c0 1 1 .96 1.042 2H4.505c-.005-1.04.995-1 .995-2v-.67Z"></path>
+            </svg>
+          </span>
+          OT
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M9.99218 7.5252C8.75122 9.81068 6.96624 11.9042 5.46441 12.9372M11.417 3.67499C11.3199 4.2481 11.1565 4.84053 10.9407 5.43752M9.69429 5.66581C8.7959 4.86934 7.7354 4.19381 6.50999 3.73915M13.1917 11.1995C12.8465 9.98727 12.2006 8.61567 11.2464 7.35127M3.55783 12.7451C2.29138 11.5591 1.5 9.87188 1.5 7.99986C1.5 7.48353 1.5602 6.98127 1.67397 6.4997M12.403 12.7815C11.2451 13.8483 9.69863 14.4999 8 14.4999C7.10254 14.4999 6.24756 14.318 5.46991 13.9891M12.4221 3.2359C13.7003 4.42289 14.5 6.11798 14.5 7.99987C14.5 9.15355 14.1994 10.237 13.6723 11.1763M6.45841 1.68377C6.95257 1.56357 7.46885 1.49986 8 1.49986C8.88689 1.49986 9.7323 1.67749 10.5026 1.9991M4.5 2.99986C4.5 3.82829 3.82843 4.49986 3 4.49986C2.17157 4.49986 1.5 3.82829 1.5 2.99986C1.5 2.17144 2.17157 1.49986 3 1.49986C3.82843 1.49986 4.5 2.17144 4.5 2.99986ZM12.6667 2.53504C12.6667 3.16924 12.1525 3.68336 11.5183 3.68336C10.8841 3.68336 10.37 3.16924 10.37 2.53504C10.37 1.90084 10.8841 1.38672 11.5183 1.38672C12.1525 1.38672 12.6667 1.90084 12.6667 2.53504ZM5.59832 13.4647C5.59832 14.0989 5.0842 14.613 4.45 14.613C3.8158 14.613 3.30168 14.0989 3.30168 13.4647C3.30168 12.8305 3.8158 12.3164 4.45 12.3164C5.0842 12.3164 5.59832 12.8305 5.59832 13.4647ZM14.6 12.3164C14.6 12.9506 14.0859 13.4647 13.4517 13.4647C12.8175 13.4647 12.3034 12.9506 12.3034 12.3164C12.3034 11.6822 12.8175 11.1681 13.4517 11.1681C14.0859 11.1681 14.6 11.6822 14.6 12.3164ZM11.6377 6.49366C11.6377 7.12786 11.1236 7.64198 10.4894 7.64198C9.85518 7.64198 9.34106 7.12786 9.34106 6.49366C9.34106 5.85946 9.85518 5.34534 10.4894 5.34534C11.1236 5.34534 11.6377 5.85946 11.6377 6.49366Z"></path>
+            </svg>
+          </span>
+          ASM
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item active">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="M15.5 14v1.5h-5v-5h3m-1 2 1 1 2-3m-10-5L4 7l1.5 1.5m1.5 0 1-3m1.52 0L11 7 9.52 8.5m3.98 0V2.498a.998.998 0 0 0-.998-.998H2.498a.998.998 0 0 0-.998.998v8.044c0 .551.447.998.998.998H8.5m-7-8.04h12"></path>
+            </svg>
+          </span>
+          TOOL
+          <div class="dropdown-menu">
+            <a href="../TENABLE TOOLS/Custom_audit.html" class="dropdown-item active">Custom Audit</a>
+          </div>
+        </div>
+
+        <div class="nav-item ">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="m9.5 9.5 2-2-2-.98 1.97-1.99L9.5 3.5l1.643-1.643L8 1 2.5 2.5v7.031c0 2.969 2.934 4.686 5.398 5.727.065.028.139.028.204 0C10.566 14.218 13.5 12.5 13.5 9.53V2.5"></path>
+            </svg>
+          </span>
+          VM
+          <div class="dropdown-menu">
+            <a href="../tenable_vm/dashboard_agentes_tenable_vm.html" class="dropdown-item ">Agentes</a>
+            <a href="../tenable_vm/dashboard_gestao_ativos_tenable_vm.html" class="dropdown-item">Ativos</a>
+            <a href="../tenable_vm/Dashboard de Compliance de Host Audit.html" class="dropdown-item">Compliance</a>
+            <a href="../tenable_vm/Dashboard Tenable VM - Findings.html" class="dropdown-item">Findings</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M9.99218 7.5252C8.75122 9.81068 6.96624 11.9042 5.46441 12.9372M11.417 3.67499C11.3199 4.2481 11.1565 4.84053 10.9407 5.43752M9.69429 5.66581C8.7959 4.86934 7.7354 4.19381 6.50999 3.73915M13.1917 11.1995C12.8465 9.98727 12.2006 8.61567 11.2464 7.35127M3.55783 12.7451C2.29138 11.5591 1.5 9.87188 1.5 7.99986C1.5 7.48353 1.5602 6.98127 1.67397 6.4997M12.403 12.7815C11.2451 13.8483 9.69863 14.4999 8 14.4999C7.10254 14.4999 6.24756 14.318 5.46991 13.9891M12.4221 3.2359C13.7003 4.42289 14.5 6.11798 14.5 7.99987C14.5 9.15355 14.1994 10.237 13.6723 11.1763M6.45841 1.68377C6.95257 1.56357 7.46885 1.49986 8 1.49986C8.88689 1.49986 9.7323 1.67749 10.5026 1.9991M4.5 2.99986C4.5 3.82829 3.82843 4.49986 3 4.49986C2.17157 4.49986 1.5 3.82829 1.5 2.99986C1.5 2.17144 2.17157 1.49986 3 1.49986C3.82843 1.49986 4.5 2.17144 4.5 2.99986ZM12.6667 2.53504C12.6667 3.16924 12.1525 3.68336 11.5183 3.68336C10.8841 3.68336 10.37 3.16924 10.37 2.53504C10.37 1.90084 10.8841 1.38672 11.5183 1.38672C12.1525 1.38672 12.6667 1.90084 12.6667 2.53504ZM5.59832 13.4647C5.59832 14.0989 5.0842 14.613 4.45 14.613C3.8158 14.613 3.30168 14.0989 3.30168 13.4647C3.30168 12.8305 3.8158 12.3164 4.45 12.3164C5.0842 12.3164 5.59832 12.8305 5.59832 13.4647ZM14.6 12.3164C14.6 12.9506 14.0859 13.4647 13.4517 13.4647C12.8175 13.4647 12.3034 12.9506 12.3034 12.3164C12.3034 11.6822 12.8175 11.1681 13.4517 11.1681C14.0859 11.1681 14.6 11.6822 14.6 12.3164ZM11.6377 6.49366C11.6377 7.12786 11.1236 7.64198 10.4894 7.64198C9.85518 7.64198 9.34106 7.12786 9.34106 6.49366C9.34106 5.85946 9.85518 5.34534 10.4894 5.34534C11.1236 5.34534 11.6377 5.85946 11.6377 6.49366Z"></path>
+            </svg>
+          </span>
+          WAS
+          <div class="dropdown-menu">
+            <a href="../TENABLE WAS/Was_app.html" class="dropdown-item">Aplicações</a>
+            <a href="../TENABLE WAS/Was_Vulnerabilidades.html" class="dropdown-item">Vulnerabilidades</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linejoin="round" stroke-miterlimit="10" d="M11.228 13.518c2.668 0 3.36-1.786 3.36-3.048 0-1.643-1.166-2.458-2.04-2.67a2.102 2.102 0 0 0-1.728-3.296c-.474 0-.907.162-1.26.427-.78-1.733-1.995-2.425-3.583-2.425-2.196 0-3.975 1.922-3.975 4.117 0 .754.222 1.452.587 2.053a2.676 2.676 0 0 0-1.07 2.134 2.69 2.69 0 0 0 2.69 2.69l7.02.018Z"></path>
+            </svg>
+          </span>
+          CS
+          <div class="dropdown-menu">
+            <a href="../TENABLE CS/CS_Findings.html" class="dropdown-item">Findings</a>
+            <a href="../TENABLE CS/CS_Vulnerabilidades.html" class="dropdown-item">Vulnerabilidades</a>
+            <a href="" class="dropdown-item">Inventário</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="M4.105 12.82v-.68a2.612 2.612 0 0 1 2.612-2.612h2.612a2.612 2.612 0 0 1 2.612 2.612v.567M2.5 2.5 8 1l5.5 1.5v7.03c0 2.97-2.934 4.688-5.398 5.728a.263.263 0 0 1-.204 0C5.434 14.218 2.5 12.5 2.5 9.531V2.5Zm7.508 2.997a2.008 2.008 0 1 1-4.016 0 2.008 2.008 0 0 1 4.016 0Z"></path>
+            </svg>
+          </span>
+          IE
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="m1.639 6.813 1.445 5.396a1 1 0 0 0 .707.707l5.396 1.445a1 1 0 0 0 .966-.258l3.95-3.95a1 1 0 0 0 .258-.966L12.916 3.79a1 1 0 0 0-.707-.707L6.813 1.64a1 1 0 0 0-.966.258l-3.95 3.95a1 1 0 0 0-.258.966Z"></path>
+            </svg>
+          </span>
+          EM
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Exposure Cards</a>
+          </div>
+        </div>
+      </nav>
+    </div>
+
+    <div class="nav-right">
+      <a href="../../index.html" class="home-btn" aria-label="Voltar para a Home">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 16 16" fill="none" style="display: block; stroke-width: var(--pld-icon-strokeWidth);" aria-label="IconApps">
+          <path d="M4 4.5H2C1.72386 4.5 1.5 4.27614 1.5 4V2C1.5 1.72386 1.72386 1.5 2 1.5H4C4.27614 1.5 4.5 1.72386 4.5 2V4C4.5 4.27614 4.27614 4.5 4 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 4.5H7C6.72386 4.5 6.5 4.27614 6.5 4V2C6.5 1.72386 6.72386 1.5 7 1.5H9C9.27614 1.5 9.5 1.72386 9.5 2V4C9.5 4.27614 9.27614 4.5 9 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 4.5H12C11.7239 4.5 11.5 4.27614 11.5 4V2C11.5 1.72386 11.7239 1.5 12 1.5H14C14.2761 1.5 14.5 1.72386 14.5 2V4C14.5 4.27614 14.2761 4.5 14 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M4 9.5H2C1.72386 9.5 1.5 9.27614 1.5 9V7C1.5 6.72386 1.72386 6.5 2 6.5H4C4.27614 6.5 4.5 6.72386 4.5 7V9C4.5 9.27614 4.27614 9.5 4 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 9.5H7C6.72386 9.5 6.5 9.27614 6.5 9V7C6.5 6.72386 6.72386 6.5 7 6.5H9C9.27614 6.5 9.5 6.72386 9.5 7V9C9.5 9.27614 9.27614 9.5 9 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 9.5H12C11.7239 9.5 11.5 9.27614 11.5 9V7C11.5 6.72386 11.7239 6.5 12 6.5H14C14.2761 6.5 14.5 6.72386 14.5 7V9C14.5 9.27614 14.2761 9.5 14 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M4 14.5H2C1.72386 14.5 1.5 14.2761 1.5 14V12C1.5 11.7239 1.72386 11.5 2 11.5H4C4.27614 11.5 4.5 11.7239 4.5 12V14C4.5 14.2761 4.27614 14.5 4 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 14.5H7C6.72386 14.5 6.5 14.2761 6.5 14V12C6.5 11.7239 6.72386 11.5 7 11.5H9C9.27614 11.5 9.5 11.7239 9.5 12V14C9.5 14.2761 9.27614 14.5 9 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 14.5H12C11.7239 14.5 11.5 14.2761 11.5 14V12C11.5 11.7239 11.7239 11.5 12 11.5H14C14.2761 11.5 14.5 11.7239 14.5 12V14C14.5 14.2761 14.2761 14.5 14 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <div class="content-shell">
+      <section class="hero">
+        <div class="hero-content">
+          <div>
+            <div class="eyebrow">Arquivo .audit · Análise · Seleção · Download</div>
+            <h1 class="h1-title">Dashboard Dinâmico para Arquivos de Auditoria</h1>
+            <p class="subtitle">
+              Importe um arquivo <strong>.audit</strong>, revise os itens de auditoria, mantenha apenas os controles selecionados e baixe uma nova versão no mesmo formato.
+            </p>
+          </div>
+
+          <div class="upload-panel">
+            <p class="upload-title">Importar arquivo .audit</p>
+            <p class="upload-hint">Selecione um arquivo de auditoria Tenable/Nessus. A análise é feita localmente.</p>
+            <div class="upload-actions">
+              <div class="file-input-wrap">
+                <button id="selectFileBtn" class="btn" type="button">Selecionar arquivo</button>
+                <input id="auditFile" type="file" accept=".audit,.txt,text/plain" />
+              </div>
+            </div>
+            <div id="status" class="status">Aguardando importação do arquivo.</div>
+          </div>
+        </div>
+      </section>
+
+      <main class="page">
+        <section class="grid" id="infoPanel">
+          <article class="card span-3">
+            <h3 class="info-title">Nome do Arquivo</h3>
+            <p class="info-val" id="fileName">Aguardando...</p>
+            <p class="info-sub" id="fileSize">-</p>
+          </article>
+          <article class="card span-3">
+            <h3 class="info-title">Versão</h3>
+            <p class="info-val" id="fileVersion">-</p>
+            <p class="info-sub" id="fileProfile">Perfil não identificado</p>
+          </article>
+          <article class="card span-3">
+            <h3 class="info-title">Tipo de Arquivo</h3>
+            <p class="info-val" id="fileType">.audit</p>
+            <p class="info-sub" id="fileSpecType">Aguardando análise</p>
+          </article>
+          <article class="card span-3">
+            <h3 class="info-title">Sistema Operacional Compatível</h3>
+            <p class="info-val" id="fileOS">-</p>
+            <p class="info-sub" id="fileCheckType">-</p>
+          </article>
+        </section>
+
+        <section class="kpis">
+          <div class="kpi accent">
+            <div class="label">Itens identificados</div>
+            <div class="value" id="metricTotal">0</div>
+          </div>
+          <div class="kpi green">
+            <div class="label">Itens mantidos</div>
+            <div class="value" id="metricSelected">0</div>
+          </div>
+          <div class="kpi red">
+            <div class="label">Itens removidos</div>
+            <div class="value" id="metricRemoved">0</div>
+          </div>
+          <div class="kpi yellow">
+            <div class="label">Itens c/ reg_key</div>
+            <div class="value" id="metricRegistry">0</div>
+          </div>
+          <div class="kpi purple">
+            <div class="label">Tipos de valor</div>
+            <div class="value" id="metricValueTypes">0</div>
+          </div>
+        </section>
+
+        <article class="card full table-card">
+          <div class="card-header" style="flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: flex-start;">
+              <div>
+                <h2>Itens de Auditoria</h2>
+                <p>O checkbox marcado mantém o item. Desmarcado o remove do novo arquivo gerado.</p>
+              </div>
+              <span class="pill neutral" id="visibleCounter">0 itens visíveis</span>
+            </div>
+            
+            <div class="control-grid" style="width: 100%;">
+              <div class="field" style="flex: 2;">
+                <input id="searchInput" type="search" placeholder="Pesquisar por descrição, reg_key, impacto..." disabled />
+              </div>
+              <div class="field">
+                <select id="valueTypeFilter" disabled>
+                  <option value="">Todos os value_type</option>
+                </select>
+              </div>
+              <button class="btn-outline" id="selectAllBtn" disabled>Selecionar todos</button>
+              <button class="btn-outline btn-danger-outline" id="clearAllBtn" disabled>Remover todos</button>
+              <button class="btn-outline" id="resetBtn" disabled>Restaurar seleção</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="col-desc">Description</th>
+                  <th class="col-small">value_type</th>
+                  <th class="col-small">value_data</th>
+                  <th class="col-reg">reg_key</th>
+                  <th class="col-reg-item">reg_item</th>
+                  <th class="col-impact">Impacto</th>
+                  <th class="select-cell">Manter</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                <tr>
+                  <td colspan="7" class="empty-state">Importe um arquivo .audit para carregar os itens de auditoria.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding-top: 12px; border-top: 1px solid var(--line);">
+            <p style="margin: 0; color: var(--muted); font-size: 13px; max-width: 780px; line-height: 1.5;">
+              Observação: quando algum item é removido, as linhas de assinatura <strong>#TRUST</strong> são retiradas da nova versão, pois o conteúdo foi alterado. A tabela apresenta os principais campos técnicos de cada bloco <strong>&lt;custom_item&gt;</strong>.
+            </p>
+            <button class="btn" id="downloadBtn" disabled style="background: linear-gradient(135deg, var(--green), #4ade80); color: #06101e;">
+              Baixar nova versão .audit
+            </button>
+          </div>
+        </article>
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      file: null,
+      originalText: "",
+      items: [],
+      filteredItems: []
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    $("selectFileBtn").addEventListener("click", () => $("auditFile").click());
+    $("auditFile").addEventListener("change", handleFile);
+    $("searchInput").addEventListener("input", renderTable);
+    $("valueTypeFilter").addEventListener("change", renderTable);
+    $("selectAllBtn").addEventListener("click", () => setAll(true));
+    $("clearAllBtn").addEventListener("click", () => setAll(false));
+    $("resetBtn").addEventListener("click", resetSelection);
+    $("downloadBtn").addEventListener("click", downloadSelectedAudit);
+
+    function handleFile(event) {
+      const file = event.target.files && event.target.files[0];
+
+      if (!file) return;
+
+      if (!file.name.toLowerCase().endsWith(".audit")) {
+        showStatus("warn", "O arquivo não possui extensão .audit. A análise continuará, valide o conteúdo antes de usar.");
+      } else {
+        showStatus("ok", "Lendo arquivo...");
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        try {
+          const rawText = String(reader.result || "");
+          const normalizedText = rawText.replace(/\r\n/g, "\n");
+          state.file = file;
+          state.originalText = normalizedText;
+          state.items = parseAuditItems(normalizedText);
+          state.filteredItems = [...state.items];
+
+          updateInfoPanel(file, normalizedText);
+          updateMetrics();
+          populateFilters();
+          enableControls(true);
+          renderTable();
+
+          if (state.items.length === 0) {
+            showStatus("warn", "Arquivo importado, mas nenhum bloco <custom_item> foi identificado.");
+          } else {
+            showStatus("ok", `Arquivo importado com sucesso. ${state.items.length} itens de auditoria identificados.`);
+          }
+        } catch (error) {
+          console.error(error);
+          showStatus("err", "Não foi possível processar o arquivo. Verifique se o conteúdo está em formato .audit válido.");
+        }
+      };
+
+      reader.onerror = () => showStatus("err", "Falha ao ler o arquivo selecionado.");
+      reader.readAsText(file);
+    }
+
+    function parseAuditItems(text) {
+      const regex = /<custom_item\b[^>]*>[\s\S]*?<\/custom_item>/gi;
+      const items = [];
+      let match;
+      let index = 0;
+
+      while ((match = regex.exec(text)) !== null) {
+        const raw = match[0];
+        const description = clean(extractField(raw, "description")) || `Item ${index + 1}`;
+        const valueType = clean(extractField(raw, "value_type")) || "Não informado";
+        const valueData = clean(extractField(raw, "value_data")) || "Não informado";
+        const regKey = clean(extractField(raw, "reg_key")) || "Não informado";
+        const regItem = clean(extractField(raw, "reg_item")) || "Não informado";
+        const impactOriginal = extractImpact(raw);
+        const impactPt = translateImpact(impactOriginal);
+
+        items.push({
+          id: index + 1,
+          start: match.index,
+          end: regex.lastIndex,
+          raw,
+          selected: true,
+          description,
+          valueType,
+          valueData,
+          regKey,
+          regItem,
+          impactOriginal,
+          impactPt,
+          searchText: normalizeSearch(`${description} ${valueType} ${valueData} ${regKey} ${regItem} ${impactOriginal} ${impactPt}`)
+        });
+
+        index += 1;
+      }
+
+      return items;
+    }
+
+    function extractField(block, key) {
+      const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const quoted = new RegExp("^\\s*" + escaped + "\\s*:\\s*\"([\\s\\S]*?)\"\\s*(?=\\n\\s*[A-Za-z_]+\\s*:|\\n\\s*<\\/custom_item>)", "im");
+      const q = block.match(quoted);
+
+      if (q) return q[1];
+
+      const unquoted = new RegExp("^\\s*" + escaped + "\\s*:\\s*([^\\n\\r]+)", "im");
+      const u = block.match(unquoted);
+      return u ? u[1] : "";
+    }
+
+    function extractImpact(block) {
+      const solution = extractField(block, "solution") || "";
+      const info = extractField(block, "info") || "";
+      const source = `${solution}\n${info}`;
+      const impactMatch = source.match(/(^|\n)\s*Impact\s*:\s*([^\n\r]*)/i);
+
+      if (!impactMatch) return "";
+
+      const afterTitle = source.slice(impactMatch.index + impactMatch[0].length);
+      const lines = [];
+
+      const inlineText = clean(impactMatch[2] || "");
+      if (inlineText) lines.push(inlineText);
+
+      let started = Boolean(inlineText);
+
+      for (const line of afterTitle.split(/\n/)) {
+        const current = clean(line);
+
+        if (!current && !started) {
+          continue;
+        }
+
+        if (!current && started) {
+          break;
+        }
+
+        if (/^(Default Value|Rationale|Audit|Remediation|References?|See Also|Additional Information|CIS Controls)\s*:/i.test(current)) {
+          break;
+        }
+
+        started = true;
+        lines.push(current);
+
+        if (lines.length >= 3) {
+          break;
+        }
+      }
+
+      return clean(lines.join(" ")).replace(/^["']|["']$/g, "");
+    }
+
+    function translateImpact(text) {
+      if (!text) return "Não informado";
+      const normalized = clean(text);
+
+      const exact = new Map([
+        ["Users will not be able to utilize the camera on a system.", "Os usuários não poderão utilizar a câmera no sistema."],
+        ["Windows experiences that use the cloud optimized content client component, will present the default fallback content instead of customized content.", "As experiências do Windows que usam o componente de conteúdo otimizado em nuvem apresentarão o conteúdo padrão de contingência em vez de conteúdo personalizado."],
+        ["The Connected User Experience and Telemetry service will be blocked from automatically using an authenticated proxy.", "O serviço Experiências do Usuário Conectado e Telemetria será impedido de usar automaticamente um proxy autenticado."],
+        ["Diagnostic logs and information such as crash dumps will not be collected for transmission to Microsoft.", "Logs de diagnóstico e informações, como despejos de falha, não serão coletados para transmissão à Microsoft."],
+        ["Windows Error Reporting is limited to sending kernel mini and user mode triage memory dumps, reducing the risk of sending sensitive information to Microsoft.", "O Relatório de Erros do Windows ficará limitado ao envio de minidespejos de kernel e despejos de triagem do modo usuário, reduzindo o risco de envio de informações sensíveis à Microsoft."]
+      ]);
+
+      if (exact.has(normalized)) return exact.get(normalized);
+
+      let translated = normalized;
+      const rules = [
+        [/Users will not be able to/gi, "Os usuários não poderão"],
+        [/Users will not have access to/gi, "Os usuários não terão acesso a"],
+        [/Users will not have the ability to/gi, "Os usuários não terão a capacidade de"],
+        [/Users will be able to/gi, "Os usuários poderão"],
+        [/Users can/gi, "Os usuários podem"],
+        [/User will/gi, "O usuário irá"],
+        [/The system will/gi, "O sistema irá"],
+        [/Windows will/gi, "O Windows irá"],
+        [/will not be collected/gi, "não serão coletados"],
+        [/will not be sent/gi, "não serão enviados"],
+        [/will not be available/gi, "não estará disponível"],
+        [/will not be able to/gi, "não poderá"],
+        [/will not have access to/gi, "não terá acesso a"],
+        [/will not have the ability to/gi, "não terá a capacidade de"],
+        [/will be blocked from/gi, "será impedido de"],
+        [/will be prevented from/gi, "será impedido de"],
+        [/will be limited to/gi, "será limitado a"],
+        [/will be disabled/gi, "será desabilitado"],
+        [/will be enabled/gi, "será habilitado"],
+        [/will be required/gi, "será exigido"],
+        [/will be allowed/gi, "será permitido"],
+        [/will be denied/gi, "será negado"],
+        [/will present/gi, "apresentará"],
+        [/will reduce/gi, "reduzirá"],
+        [/will increase/gi, "aumentará"],
+        [/will prevent/gi, "impedirá"],
+        [/will require/gi, "exigirá"],
+        [/will no longer/gi, "não irá mais"],
+        [/are not/gi, "não são"],
+        [/is not/gi, "não é"],
+        [/cannot/gi, "não pode"],
+        [/not be/gi, "não ser"],
+        [/able to/gi, "capaz de"],
+        [/access to/gi, "acesso a"],
+        [/camera/gi, "câmera"],
+        [/system/gi, "sistema"],
+        [/machine/gi, "máquina"],
+        [/device/gi, "dispositivo"],
+        [/devices/gi, "dispositivos"],
+        [/service/gi, "serviço"],
+        [/services/gi, "serviços"],
+        [/setting/gi, "configuração"],
+        [/settings/gi, "configurações"],
+        [/policy/gi, "política"],
+        [/policies/gi, "políticas"],
+        [/application/gi, "aplicativo"],
+        [/applications/gi, "aplicativos"],
+        [/command line/gi, "linha de comando"],
+        [/cloud/gi, "nuvem"],
+        [/content/gi, "conteúdo"],
+        [/default/gi, "padrão"],
+        [/customized/gi, "personalizado"],
+        [/information/gi, "informações"],
+        [/sensitive information/gi, "informações sensíveis"],
+        [/diagnostic logs/gi, "logs de diagnóstico"],
+        [/crash dumps/gi, "despejos de falha"],
+        [/memory dumps/gi, "despejos de memória"],
+        [/transmission/gi, "transmissão"],
+        [/Microsoft/gi, "Microsoft"],
+        [/authenticated proxy/gi, "proxy autenticado"],
+        [/install/gi, "instalar"],
+        [/upgrade/gi, "atualizar"],
+        [/remove/gi, "remover"],
+        [/configure/gi, "configurar"],
+        [/discover/gi, "descobrir"],
+        [/distribute/gi, "distribuir"],
+        [/risk/gi, "risco"],
+        [/security/gi, "segurança"],
+        [/privacy/gi, "privacidade"],
+        [/data/gi, "dados"],
+        [/password/gi, "senha"],
+        [/account/gi, "conta"],
+        [/accounts/gi, "contas"],
+        [/administrator/gi, "administrador"],
+        [/administrators/gi, "administradores"],
+        [/local/gi, "local"],
+        [/remote/gi, "remoto"],
+        [/network/gi, "rede"],
+        [/firewall/gi, "firewall"],
+        [/enabled/gi, "habilitado"],
+        [/disabled/gi, "desabilitado"],
+        [/required/gi, "exigido"],
+        [/allowed/gi, "permitido"],
+        [/blocked/gi, "bloqueado"],
+        [/sent/gi, "enviado"],
+        [/collected/gi, "coletado"],
+        [/instead of/gi, "em vez de"]
+      ];
+
+      for (const [pattern, replacement] of rules) {
+        translated = translated.replace(pattern, replacement);
+      }
+
+      return translated;
+    }
+
+    function updateInfoPanel(file, text) {
+      const version =
+        tagValue(text, "version") ||
+        regexValue(text, /\$Revision:\s*([^$]+?)\s*\$/i) ||
+        "Não identificado";
+
+      const specType = tagValue(text, "type") || "Não identificado";
+      const profile = tagValue(text, "profile") || "Perfil não identificado";
+      const specName = tagValue(text, "name") || inferOSFromCheckType(text) || "Não identificado";
+      const checkType = regexValue(text, /<check_type:"([^"]+)"\s+version:"([^"]+)">/i);
+      const labels = tagValue(text, "labels");
+
+      $("fileName").textContent = file.name;
+      $("fileSize").textContent = formatBytes(file.size);
+      $("fileVersion").textContent = version;
+      $("fileProfile").textContent = profile;
+      $("fileType").textContent = ".audit";
+      $("fileSpecType").textContent = specType;
+      $("fileOS").textContent = specName;
+      $("fileCheckType").textContent = checkType ? `check_type: ${checkType}${labels ? " • labels: " + labels : ""}` : (labels || "-");
+    }
+
+    function tagValue(text, tag) {
+      const escaped = tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`<${escaped}>([\\s\\S]*?)<\\/${escaped}>`, "i");
+      const match = text.match(regex);
+      return match ? clean(match[1]) : "";
+    }
+
+    function regexValue(text, regex) {
+      const match = text.match(regex);
+      if (!match) return "";
+      if (match.length >= 3) return `${match[1]} v${match[2]}`;
+      return clean(match[1]);
+    }
+
+    function inferOSFromCheckType(text) {
+      const check = regexValue(text, /<check_type:"([^"]+)"\s+version:"([^"]+)">/i);
+      return check || "";
+    }
+
+    function updateMetrics() {
+      const total = state.items.length;
+      const selected = state.items.filter(item => item.selected).length;
+      const removed = total - selected;
+      const registry = state.items.filter(item => item.regKey && item.regKey !== "Não informado").length;
+      const valueTypes = new Set(state.items.map(item => item.valueType).filter(Boolean)).size;
+
+      $("metricTotal").textContent = total;
+      $("metricSelected").textContent = selected;
+      $("metricRemoved").textContent = removed;
+      $("metricRegistry").textContent = registry;
+      $("metricValueTypes").textContent = valueTypes;
+    }
+
+    function populateFilters() {
+      const select = $("valueTypeFilter");
+      const current = select.value;
+      const types = [...new Set(state.items.map(item => item.valueType).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+      select.innerHTML = '<option value="">Todos os value_type</option>';
+
+      for (const type of types) {
+        const option = document.createElement("option");
+        option.value = type;
+        option.textContent = type;
+        select.appendChild(option);
+      }
+
+      select.value = current && types.includes(current) ? current : "";
+    }
+
+    function renderTable() {
+      const tbody = $("tableBody");
+      const query = normalizeSearch($("searchInput").value || "");
+      const valueType = $("valueTypeFilter").value;
+
+      const filtered = state.items.filter(item => {
+        const matchQuery = !query || item.searchText.includes(query);
+        const matchType = !valueType || item.valueType === valueType;
+        return matchQuery && matchType;
+      });
+
+      state.filteredItems = filtered;
+      $("visibleCounter").textContent = `${filtered.length} itens visíveis`;
+
+      tbody.innerHTML = "";
+
+      if (!state.file) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Importe um arquivo .audit para carregar os itens de auditoria.</td></tr>';
+        return;
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum item encontrado com os filtros atuais.</td></tr>';
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+
+      for (const item of filtered) {
+        const row = document.createElement("tr");
+        row.className = item.selected ? "" : "removed";
+
+        row.appendChild(cell(item.description, "col-desc", item.description));
+        row.appendChild(cell(item.valueType, "col-small", item.valueType));
+        row.appendChild(cell(item.valueData, "col-small", item.valueData));
+        row.appendChild(cell(item.regKey, "col-reg", item.regKey));
+        row.appendChild(cell(item.regItem, "col-reg-item", item.regItem));
+        row.appendChild(cell(item.impactPt, "col-impact", item.impactOriginal || item.impactPt));
+
+        const selectCell = document.createElement("td");
+        selectCell.className = "select-cell";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "toggle";
+        checkbox.checked = item.selected;
+        checkbox.setAttribute("aria-label", `Manter item ${item.id}`);
+        checkbox.addEventListener("change", () => {
+          item.selected = checkbox.checked;
+          updateMetrics();
+          row.className = item.selected ? "" : "removed";
+        });
+        selectCell.appendChild(checkbox);
+        row.appendChild(selectCell);
+
+        fragment.appendChild(row);
+      }
+
+      tbody.appendChild(fragment);
+    }
+
+    function cell(value, className, title) {
+      const td = document.createElement("td");
+      td.className = className;
+      td.textContent = value || "Não informado";
+      if (title) td.title = title;
+      return td;
+    }
+
+    function setAll(selected) {
+      for (const item of state.items) {
+        item.selected = selected;
+      }
+      updateMetrics();
+      renderTable();
+    }
+
+    function resetSelection() {
+      setAll(true);
+    }
+
+    function downloadSelectedAudit() {
+      if (!state.file || !state.originalText) return;
+
+      const removedItems = state.items.filter(item => !item.selected).sort((a, b) => b.start - a.start);
+      let output = state.originalText;
+
+      for (const item of removedItems) {
+        output = output.slice(0, item.start) + output.slice(item.end);
+      }
+
+      if (removedItems.length > 0) {
+        output = output.replace(/^#TRUST(?:-RSA-SHA256)?[^\n]*\n?/gmi, "");
+        output =
+          "# Arquivo .audit gerado pelo Dashboard Dinamico de Auditoria\n" +
+          "# Observacao: assinaturas #TRUST removidas porque o conteudo foi alterado.\n" +
+          output;
+      }
+
+      const baseName = state.file.name.replace(/\.audit$/i, "");
+      const fileName = `${baseName}_selecionado.audit`;
+      const blob = new Blob([output], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+
+      anchor.href = url;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+
+      showStatus("ok", `Nova versão gerada: ${fileName}. Itens mantidos: ${state.items.filter(i => i.selected).length}. Itens removidos: ${removedItems.length}.`);
+    }
+
+    function enableControls(enabled) {
+      $("searchInput").disabled = !enabled;
+      $("valueTypeFilter").disabled = !enabled;
+      $("selectAllBtn").disabled = !enabled;
+      $("clearAllBtn").disabled = !enabled;
+      $("resetBtn").disabled = !enabled;
+      $("downloadBtn").disabled = !enabled;
+    }
+
+    function showStatus(type, message) {
+      const status = $("status");
+      status.className = "status";
+      if(type) status.classList.add(type);
+      status.textContent = message;
+    }
+
+    function clean(value) {
+      return String(value || "")
+        .replace(/\r/g, "")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+
+    function normalizeSearch(value) {
+      return clean(value)
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes)) return "-";
+      const units = ["B", "KB", "MB", "GB"];
+      let size = bytes;
+      let unit = 0;
+
+      while (size >= 1024 && unit < units.length - 1) {
+        size /= 1024;
+        unit += 1;
+      }
+
+      return `${size.toFixed(size >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
+    }
+  </script>
+</body>
+</html>

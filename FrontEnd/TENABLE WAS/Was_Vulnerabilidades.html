@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Gestão de Vulnerabilidades WAS</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #07111f;
+      --bg-secondary: #0d1b2e;
+      --bg-card: rgba(15, 27, 46, 0.92);
+      --border: rgba(148, 163, 184, 0.18);
+      --text: #e5edf7;
+      --muted: #8fa4bd;
+      --accent: #22d3ee;
+      --green: #22c55e;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --orange: #f97316;
+      --blue: #38bdf8;
+      --purple: #8b5cf6;
+      --shadow: 0 18px 55px rgba(0, 0, 0, 0.38);
+      --radius-lg: 22px;
+      --radius-md: 16px;
+    }
+    * { box-sizing: border-box; }
+    
+    body {
+      margin: 0; min-height: 100vh; font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+      color: var(--text); background: radial-gradient(circle at top left, rgba(34, 211, 238, 0.18), transparent 34%), radial-gradient(circle at top right, rgba(139, 92, 246, 0.16), transparent 30%), linear-gradient(135deg, var(--bg-primary), #101827 58%, #06101e);
+      display: flex; flex-direction: column; align-items: center; overflow-x: hidden;
+    }
+    body.modal-open { overflow: hidden !important; touch-action: none; }
+
+    /* --- MENU SUPERIOR (TOP NAV) PROFISSIONAL --- */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      width: 100%;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: rgba(11, 20, 36, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .nav-left { display: flex; align-items: center; flex: 1; }
+    .nav-center { display: flex; align-items: center; justify-content: center; }
+    .nav-right { display: flex; align-items: center; justify-content: flex-end; flex: 1; }
+
+    .nav-logo { display: flex; align-items: center; text-decoration: none; }
+    .nav-logo img { height: 42px; width: auto; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(34, 211, 238, 0.15)); }
+
+    .nav-menu { display: flex; height: 76px; gap: 6px; }
+    .nav-item {
+      position: relative; display: flex; align-items: center; gap: 8px; padding: 0 14px;
+      color: #94a3b8; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      cursor: pointer; transition: color 0.2s, background 0.2s;
+    }
+    .nav-icon { display: flex; align-items: center; justify-content: center; }
+
+    .nav-item::after {
+      content: ""; position: absolute; bottom: 0; left: 16px; right: 16px; height: 3px;
+      background: var(--accent); border-radius: 4px 4px 0 0; opacity: 0; transition: 0.2s;
+    }
+    .nav-item:hover, .nav-item.active { color: #fff; background: rgba(255, 255, 255, 0.03); }
+    .nav-item:hover::after, .nav-item.active::after { opacity: 1; }
+
+    .dropdown-menu {
+      position: absolute; top: 100%; left: 0; min-width: 200px;
+      background: rgba(15, 27, 46, 0.98); border: 1px solid rgba(148, 163, 184, 0.18); border-top: none;
+      border-radius: 0 0 14px 14px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35); padding: 8px; display: flex;
+      flex-direction: column; gap: 4px; opacity: 0; visibility: hidden; transform: translateY(10px);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .dropdown-menu::before {
+      content: ""; position: absolute; top: -1px; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+    .nav-item:hover .dropdown-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+
+    .dropdown-item {
+      padding: 10px 14px; color: #cbd5e1; text-decoration: none; font-size: 13px; font-weight: 600;
+      border-radius: 8px; text-transform: none; letter-spacing: normal; transition: all 0.15s ease; white-space: nowrap;
+    }
+    .dropdown-item:hover, .dropdown-item.active { background: rgba(34, 211, 238, 0.12); color: var(--accent); }
+
+    .home-btn {
+      display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.2); background: rgba(15, 23, 42, 0.4); transition: all 0.2s ease;
+      text-decoration: none; --pld-icon-strokeWidth: 1.5;
+    }
+    .home-btn svg { width: 18px; height: 18px; }
+    .home-btn:hover {
+      color: #fff; border-color: var(--accent); background: rgba(34, 211, 238, 0.1);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2); transform: translateY(-1px);
+    }
+
+    /* LAYOUT EXECUTIVO */
+    .app-shell { width: 100%; margin: 0; display: flex; flex-direction: column; flex: 1; }
+    .page { width: 100%; max-width: 1560px; margin: 0 auto; padding: 30px 24px; }
+    
+    .hero { position: relative; overflow: hidden; padding: 30px; border: 1px solid var(--border); border-radius: 28px; background: linear-gradient(135deg, rgba(15, 27, 46, 0.96), rgba(13, 27, 46, 0.76)), linear-gradient(90deg, rgba(34, 211, 238, 0.12), rgba(139, 92, 246, 0.12)); box-shadow: var(--shadow); margin-bottom: 20px;}
+    .hero::before { content: ""; position: absolute; inset: -60px -90px auto auto; width: 260px; height: 260px; background: radial-gradient(circle, rgba(34, 211, 238, 0.28), transparent 68%); filter: blur(2px); }
+    .hero-content { display: grid; grid-template-columns: 1.4fr 0.85fr; gap: 24px; align-items: stretch; position: relative; z-index: 2; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(34, 211, 238, 0.26); color: #b6f1ff; background: rgba(34, 211, 238, 0.09); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    .h1-title { margin: 0; font-size: clamp(26px, 3vw, 32px); font-weight: 700; color: #fff; }
+    .subtitle { margin: 14px 0 0; color: var(--muted); font-size: 16px; line-height: 1.55; }
+    
+    .upload-panel { border: 1px dashed rgba(34, 211, 238, 0.38); border-radius: 24px; background: linear-gradient(180deg, rgba(20, 37, 62, 0.92), rgba(15, 27, 46, 0.86)); padding: 20px; display: flex; flex-direction: column; gap: 14px; min-height: 200px; justify-content: center; transition: all 0.18s ease; }
+    .upload-panel.dragging { border-color: rgba(34, 211, 238, 0.95); background: rgba(34, 211, 238, 0.12); transform: translateY(-2px); }
+    .upload-title { margin: 0; font-size: 18px; font-weight: 800; color: #fff;}
+    .upload-hint { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .upload-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; justify-content: flex-start; }
+
+    .file-input-wrap { position: relative; display: inline-flex; width: fit-content; }
+    .file-input-wrap input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 14px; padding: 12px 16px; color: #06101e; background: linear-gradient(135deg, var(--accent), #60a5fa); font-weight: 800; cursor: pointer; box-shadow: 0 12px 30px rgba(34, 211, 238, 0.22); transition: transform 0.15s;}
+    .btn:hover { transform: translateY(-1px); }
+    .status { min-height: 22px; font-size: 13px; color: var(--muted); }
+    .status.ok { color: #86efac; }
+    .status.error { color: #fca5a5; }
+    .meta-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .meta-chip { padding: 9px 12px; border: 1px solid var(--border); border-radius: 999px; color: #cbd5e1; background: rgba(15, 23, 42, 0.42); font-size: 12px; }
+
+    /* SECÇÕES GERAIS */
+    .section { margin-top: 26px; width: 100%; }
+    .section-header { display: flex; justify-content: space-between; gap: 18px; align-items: end; margin-bottom: 16px; flex-wrap: wrap;}
+    .section-title { margin: 0; font-size: 22px; letter-spacing: -0.02em; font-weight: 800; }
+    .section-desc { margin: 5px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+
+    /* GRELHAS RÍGIDAS */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 0 0 20px; }
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; width: 100%;}
+    .chart-grid.grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .wide { grid-column: 1 / -1; }
+
+    .kpi-card { position: relative; overflow: hidden; min-height: 140px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-card); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; justify-content: space-between;}
+    .kpi-card::after { content: ""; position: absolute; right: -50px; top: -70px; width: 150px; height: 150px; border-radius: 999px; background: radial-gradient(circle, rgba(34, 211, 238, 0.18), transparent 70%); }
+    .kpi-label { position: relative; margin: 0; color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.055em; }
+    .kpi-value { position: relative; margin: 10px 0 4px; font-size: clamp(28px, 3vw, 42px); font-weight: 900; letter-spacing: -0.04em; color: #fff; word-break: break-word;}
+    .kpi-help { position: relative; color: var(--muted); font-size: 12px; }
+    .score-card { background: linear-gradient(135deg, rgba(34, 211, 238, 0.16), rgba(139, 92, 246, 0.12)), var(--bg-card); }
+
+    .panel { display: flex; flex-direction: column; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-card); box-shadow: 0 14px 42px rgba(0, 0, 0, 0.2); }
+    .panel-title { display: flex; justify-content: space-between; gap: 16px; align-items: start; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .panel-title h3 { margin: 0; font-size: 17px; letter-spacing: -0.01em; color: #fff;}
+    .panel-title p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+
+    .chart-wrap { position: relative; width: 100%; height: 350px; min-height: 350px; padding: 14px; background: radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 30%), linear-gradient(180deg, rgba(15, 27, 46, 0.98) 0%, rgba(15, 27, 46, 0.95) 100%); border: 1px solid var(--border); border-radius: 16px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);}
+    .chart-wrap::after { content: ""; position: absolute; inset: 14px; pointer-events: none; border-radius: 12px; background-image: linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px); background-size: 28px 28px; mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.08)); }
+    .chart-clickable { cursor: zoom-in; transition: transform 0.15s; }
+    .chart-clickable:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3);}
+
+    .table-panel { overflow: hidden; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border);}
+    .table-scroll { overflow: auto; max-height: 520px; width: 100%; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; background: rgba(15, 23, 42, 0.25); }
+    th, td { padding: 12px 14px; border-bottom: 1px solid rgba(148, 163, 184, 0.12); text-align: left; font-size: 13px; white-space: nowrap; color: #cbd5e1;}
+    th { position: sticky; top: 0; z-index: 1; color: #c7f9ff; background: rgba(15, 27, 46, 0.98); text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em;}
+    td.numeric { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .empty-state { padding: 30px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-card); color: var(--muted); text-align: center; }
+    .hidden { display: none !important; }
+
+    .badge { display: inline-flex; align-items: center; padding: 6px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; text-transform: uppercase; background: rgba(148, 163, 184, 0.12); color: #dbeafe; }
+    .badge.green { background: rgba(34, 197, 94, 0.13); color: #86efac; }
+    .badge.red { background: rgba(239, 68, 68, 0.13); color: #fca5a5; }
+    .badge.amber { background: rgba(245, 158, 11, 0.14); color: #fde68a; }
+    .badge.orange { background: rgba(249, 115, 22, 0.14); color: #fdba74; }
+    .badge.blue { background: rgba(56, 189, 248, 0.14); color: #bae6fd; }
+
+    /* MODAIS */
+    .chart-modal, .table-modal { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .chart-modal-backdrop, .table-modal-backdrop { position: absolute; inset: 0; background: rgba(2, 6, 23, 0.72); backdrop-filter: blur(10px); }
+    .chart-modal-dialog, .table-modal-dialog { position: relative; width: min(1200px, 98%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; gap: 16px; padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: linear-gradient(180deg, rgba(15, 27, 46, 0.98), rgba(8, 15, 28, 0.98)); box-shadow: var(--shadow); }
+    .table-modal-dialog { width: min(1500px, 98%); }
+    .chart-modal-header, .table-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .chart-modal-title, .table-modal-title { margin: 0; font-size: 20px; font-weight: 850; color: #fff; }
+    .chart-modal-subtitle, .table-modal-subtitle { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .chart-modal-close, .table-modal-close { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; background: rgba(255, 255, 255, 0.04); color: #fff; font-weight: 800; cursor: pointer; transition: background 0.2s;}
+    .chart-modal-close:hover, .table-modal-close:hover { background: rgba(255, 255, 255, 0.1); }
+    .chart-modal-body, .table-modal-body { position: relative; flex: 1; min-height: 62vh; border: 1px solid var(--border); border-radius: 18px; background: radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 30%), linear-gradient(180deg, rgba(15, 27, 46, 0.98) 0%, rgba(15, 27, 46, 0.95) 100%); padding: 16px; overflow: hidden; }
+    .table-modal-body { overflow: auto; }
+    .chart-modal-slot { position: relative; width: 100%; height: 100%; min-height: 62vh; }
+    .chart-modal-slot canvas { display: block; width: 100% !important; height: 100% !important; }
+    .legend-list { display: grid; gap: 8px; margin-top: 12px; }
+    .legend-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 12px; background: rgba(2, 6, 23, 0.28); color: #cbd5e1; font-size: 12px; cursor: default;}
+    .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; margin-right: 8px; }
+
+    /* MEDIA QUERIES & IMPRESSÃO */
+    @media (max-width: 1100px) {
+      .top-nav { padding: 0 16px; overflow-x: auto; gap: 24px; justify-content: flex-start;}
+      .nav-left { flex: 0 0 auto; }
+      .nav-center { flex: 1 0 auto; }
+      .nav-right { flex: 0 0 auto; margin-left: auto; }
+      .hero-content, .chart-grid, .chart-grid.grid-3 { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media print {
+      @page { size: landscape; margin: 10mm; }
+      body, html { background: #07111f !important; color: #e5edf7 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; height: auto !important; overflow: visible !important; }
+      .top-nav, .hero, .no-print, .chart-modal, .table-modal, #btnExport { display: none !important; }
+      .app-shell { padding: 0 !important; margin: 0 !important; max-width: 100% !important; display: block !important; }
+      #dashboardContent { display: block !important; }
+      .section { page-break-inside: auto !important; break-inside: auto !important; margin-top: 10px !important; }
+      .print-new-page { page-break-before: always !important; break-before: page !important; }
+      .kpi-grid { display: flex !important; flex-wrap: wrap !important; gap: 10px !important; margin-bottom: 20px !important;}
+      .kpi-card { flex: 1 1 20% !important; page-break-inside: avoid !important; break-inside: avoid !important; margin-bottom: 10px !important; }
+      .chart-grid, .chart-grid.grid-3 { display: flex !important; flex-wrap: wrap !important; gap: 15px !important; margin-bottom: 20px !important; page-break-inside: auto !important;}
+      .panel { flex: 1 1 calc(50% - 15px) !important; page-break-inside: avoid !important; break-inside: avoid !important; overflow: visible !important; border: 1px solid rgba(148, 163, 184, 0.3) !important; margin-bottom: 15px !important; }
+      .panel.wide, .panel.table-panel { flex: 1 1 100% !important; }
+      .table-scroll { max-height: none !important; overflow: visible !important; height: auto !important; }
+      table { width: 100% !important; page-break-inside: auto !important; break-inside: auto !important; }
+      thead { display: table-header-group !important; } tbody { display: table-row-group !important; }
+      tr, th, td { page-break-inside: avoid !important; break-inside: avoid !important; }
+      th { position: static !important; } 
+      .chart-wrap { height: 280px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+      ::-webkit-scrollbar { display: none; }
+    }
+  </style>
+</head>
+<body>
+  
+<header class="top-nav">
+    <div class="nav-left">
+      <a href="../index.html" class="nav-logo">
+        <img src="../images/logo-shield-header.png" alt="Logo Shield" />
+      </a>
+    </div>
+
+    <div class="nav-center">
+      <nav class="nav-menu">
+        
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M14.502 5.999a2.5 2.5 0 1 1 0-3.997M11 2.5H3a1.5 1.5 0 1 0 0 3h8M1.85 5l3.983 5.586M8.694 9.43 5.891 5.5M8 11.995v.01m-2.5-.174a2.5 2.5 0 0 1 5 0v.669c0 1 1 .96 1.042 2H4.505c-.005-1.04.995-1 .995-2v-.67Z"></path>
+            </svg>
+          </span>
+          OT
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M9.99218 7.5252C8.75122 9.81068 6.96624 11.9042 5.46441 12.9372M11.417 3.67499C11.3199 4.2481 11.1565 4.84053 10.9407 5.43752M9.69429 5.66581C8.7959 4.86934 7.7354 4.19381 6.50999 3.73915M13.1917 11.1995C12.8465 9.98727 12.2006 8.61567 11.2464 7.35127M3.55783 12.7451C2.29138 11.5591 1.5 9.87188 1.5 7.99986C1.5 7.48353 1.5602 6.98127 1.67397 6.4997M12.403 12.7815C11.2451 13.8483 9.69863 14.4999 8 14.4999C7.10254 14.4999 6.24756 14.318 5.46991 13.9891M12.4221 3.2359C13.7003 4.42289 14.5 6.11798 14.5 7.99987C14.5 9.15355 14.1994 10.237 13.6723 11.1763M6.45841 1.68377C6.95257 1.56357 7.46885 1.49986 8 1.49986C8.88689 1.49986 9.7323 1.67749 10.5026 1.9991M4.5 2.99986C4.5 3.82829 3.82843 4.49986 3 4.49986C2.17157 4.49986 1.5 3.82829 1.5 2.99986C1.5 2.17144 2.17157 1.49986 3 1.49986C3.82843 1.49986 4.5 2.17144 4.5 2.99986ZM12.6667 2.53504C12.6667 3.16924 12.1525 3.68336 11.5183 3.68336C10.8841 3.68336 10.37 3.16924 10.37 2.53504C10.37 1.90084 10.8841 1.38672 11.5183 1.38672C12.1525 1.38672 12.6667 1.90084 12.6667 2.53504ZM5.59832 13.4647C5.59832 14.0989 5.0842 14.613 4.45 14.613C3.8158 14.613 3.30168 14.0989 3.30168 13.4647C3.30168 12.8305 3.8158 12.3164 4.45 12.3164C5.0842 12.3164 5.59832 12.8305 5.59832 13.4647ZM14.6 12.3164C14.6 12.9506 14.0859 13.4647 13.4517 13.4647C12.8175 13.4647 12.3034 12.9506 12.3034 12.3164C12.3034 11.6822 12.8175 11.1681 13.4517 11.1681C14.0859 11.1681 14.6 11.6822 14.6 12.3164ZM11.6377 6.49366C11.6377 7.12786 11.1236 7.64198 10.4894 7.64198C9.85518 7.64198 9.34106 7.12786 9.34106 6.49366C9.34106 5.85946 9.85518 5.34534 10.4894 5.34534C11.1236 5.34534 11.6377 5.85946 11.6377 6.49366Z"></path>
+            </svg>
+          </span>
+          ASM
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="M15.5 14v1.5h-5v-5h3m-1 2 1 1 2-3m-10-5L4 7l1.5 1.5m1.5 0 1-3m1.52 0L11 7 9.52 8.5m3.98 0V2.498a.998.998 0 0 0-.998-.998H2.498a.998.998 0 0 0-.998.998v8.044c0 .551.447.998.998.998H8.5m-7-8.04h12"></path>
+            </svg>
+          </span>
+          TOOL
+          <div class="dropdown-menu">
+            <a href="../TENABLE TOOLS/Custom_audit.html" class="dropdown-item">Custom Audit</a>
+          </div>
+        </div>
+
+        <div class="nav-item ">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="m9.5 9.5 2-2-2-.98 1.97-1.99L9.5 3.5l1.643-1.643L8 1 2.5 2.5v7.031c0 2.969 2.934 4.686 5.398 5.727.065.028.139.028.204 0C10.566 14.218 13.5 12.5 13.5 9.53V2.5"></path>
+            </svg>
+          </span>
+          VM
+          <div class="dropdown-menu">
+            <a href="../tenable_vm/dashboard_agentes_tenable_vm.html" class="dropdown-item ">Agentes</a>
+            <a href="../tenable_vm/dashboard_gestao_ativos_tenable_vm.html" class="dropdown-item">Ativos</a>
+            <a href="../tenable_vm/Dashboard de Compliance de Host Audit.html" class="dropdown-item">Compliance</a>
+            <a href="../tenable_vm/Dashboard Tenable VM - Findings.html" class="dropdown-item">Findings</a>
+          </div>
+        </div>
+
+        <div class="nav-item active">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M9.99218 7.5252C8.75122 9.81068 6.96624 11.9042 5.46441 12.9372M11.417 3.67499C11.3199 4.2481 11.1565 4.84053 10.9407 5.43752M9.69429 5.66581C8.7959 4.86934 7.7354 4.19381 6.50999 3.73915M13.1917 11.1995C12.8465 9.98727 12.2006 8.61567 11.2464 7.35127M3.55783 12.7451C2.29138 11.5591 1.5 9.87188 1.5 7.99986C1.5 7.48353 1.5602 6.98127 1.67397 6.4997M12.403 12.7815C11.2451 13.8483 9.69863 14.4999 8 14.4999C7.10254 14.4999 6.24756 14.318 5.46991 13.9891M12.4221 3.2359C13.7003 4.42289 14.5 6.11798 14.5 7.99987C14.5 9.15355 14.1994 10.237 13.6723 11.1763M6.45841 1.68377C6.95257 1.56357 7.46885 1.49986 8 1.49986C8.88689 1.49986 9.7323 1.67749 10.5026 1.9991M4.5 2.99986C4.5 3.82829 3.82843 4.49986 3 4.49986C2.17157 4.49986 1.5 3.82829 1.5 2.99986C1.5 2.17144 2.17157 1.49986 3 1.49986C3.82843 1.49986 4.5 2.17144 4.5 2.99986ZM12.6667 2.53504C12.6667 3.16924 12.1525 3.68336 11.5183 3.68336C10.8841 3.68336 10.37 3.16924 10.37 2.53504C10.37 1.90084 10.8841 1.38672 11.5183 1.38672C12.1525 1.38672 12.6667 1.90084 12.6667 2.53504ZM5.59832 13.4647C5.59832 14.0989 5.0842 14.613 4.45 14.613C3.8158 14.613 3.30168 14.0989 3.30168 13.4647C3.30168 12.8305 3.8158 12.3164 4.45 12.3164C5.0842 12.3164 5.59832 12.8305 5.59832 13.4647ZM14.6 12.3164C14.6 12.9506 14.0859 13.4647 13.4517 13.4647C12.8175 13.4647 12.3034 12.9506 12.3034 12.3164C12.3034 11.6822 12.8175 11.1681 13.4517 11.1681C14.0859 11.1681 14.6 11.6822 14.6 12.3164ZM11.6377 6.49366C11.6377 7.12786 11.1236 7.64198 10.4894 7.64198C9.85518 7.64198 9.34106 7.12786 9.34106 6.49366C9.34106 5.85946 9.85518 5.34534 10.4894 5.34534C11.1236 5.34534 11.6377 5.85946 11.6377 6.49366Z"></path>
+            </svg>
+          </span>
+          WAS
+          <div class="dropdown-menu">
+            <a href="../TENABLE WAS/Was_app.html" class="dropdown-item ">Aplicações</a>
+            <a href="../TENABLE WAS/Was_Vulnerabilidades.html" class="dropdown-item active">Vulnerabilidades</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linejoin="round" stroke-miterlimit="10" d="M11.228 13.518c2.668 0 3.36-1.786 3.36-3.048 0-1.643-1.166-2.458-2.04-2.67a2.102 2.102 0 0 0-1.728-3.296c-.474 0-.907.162-1.26.427-.78-1.733-1.995-2.425-3.583-2.425-2.196 0-3.975 1.922-3.975 4.117 0 .754.222 1.452.587 2.053a2.676 2.676 0 0 0-1.07 2.134 2.69 2.69 0 0 0 2.69 2.69l7.02.018Z"></path>
+            </svg>
+          </span>
+          CS
+          <div class="dropdown-menu">
+            <a href="../TENABLE CS/CS_Findings.html" class="dropdown-item">Findings</a>
+            <a href="../TENABLE CS/CS_Vulnerabilidades.html" class="dropdown-item">Vulnerabilidades</a>
+            <a href="" class="dropdown-item">Inventário</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" d="M4.105 12.82v-.68a2.612 2.612 0 0 1 2.612-2.612h2.612a2.612 2.612 0 0 1 2.612 2.612v.567M2.5 2.5 8 1l5.5 1.5v7.03c0 2.97-2.934 4.688-5.398 5.728a.263.263 0 0 1-.204 0C5.434 14.218 2.5 12.5 2.5 9.531V2.5Zm7.508 2.997a2.008 2.008 0 1 1-4.016 0 2.008 2.008 0 0 1 4.016 0Z"></path>
+            </svg>
+          </span>
+          IE
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Desenvolvimento</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 16 16">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="m1.639 6.813 1.445 5.396a1 1 0 0 0 .707.707l5.396 1.445a1 1 0 0 0 .966-.258l3.95-3.95a1 1 0 0 0 .258-.966L12.916 3.79a1 1 0 0 0-.707-.707L6.813 1.64a1 1 0 0 0-.966.258l-3.95 3.95a1 1 0 0 0-.258.966Z"></path>
+            </svg>
+          </span>
+          EM
+          <div class="dropdown-menu">
+            <a href="#" class="dropdown-item">Exposure Cards</a>
+          </div>
+        </div>
+      </nav>
+    </div>
+
+    <div class="nav-right">
+      <a href="../../index.html" class="home-btn" aria-label="Voltar para a Home">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 16 16" fill="none" style="display: block; stroke-width: var(--pld-icon-strokeWidth);" aria-label="IconApps">
+          <path d="M4 4.5H2C1.72386 4.5 1.5 4.27614 1.5 4V2C1.5 1.72386 1.72386 1.5 2 1.5H4C4.27614 1.5 4.5 1.72386 4.5 2V4C4.5 4.27614 4.27614 4.5 4 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 4.5H7C6.72386 4.5 6.5 4.27614 6.5 4V2C6.5 1.72386 6.72386 1.5 7 1.5H9C9.27614 1.5 9.5 1.72386 9.5 2V4C9.5 4.27614 9.27614 4.5 9 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 4.5H12C11.7239 4.5 11.5 4.27614 11.5 4V2C11.5 1.72386 11.7239 1.5 12 1.5H14C14.2761 1.5 14.5 1.72386 14.5 2V4C14.5 4.27614 14.2761 4.5 14 4.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M4 9.5H2C1.72386 9.5 1.5 9.27614 1.5 9V7C1.5 6.72386 1.72386 6.5 2 6.5H4C4.27614 6.5 4.5 6.72386 4.5 7V9C4.5 9.27614 4.27614 9.5 4 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 9.5H7C6.72386 9.5 6.5 9.27614 6.5 9V7C6.5 6.72386 6.72386 6.5 7 6.5H9C9.27614 6.5 9.5 6.72386 9.5 7V9C9.5 9.27614 9.27614 9.5 9 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 9.5H12C11.7239 9.5 11.5 9.27614 11.5 9V7C11.5 6.72386 11.7239 6.5 12 6.5H14C14.2761 6.5 14.5 6.72386 14.5 7V9C14.5 9.27614 14.2761 9.5 14 9.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M4 14.5H2C1.72386 14.5 1.5 14.2761 1.5 14V12C1.5 11.7239 1.72386 11.5 2 11.5H4C4.27614 11.5 4.5 11.7239 4.5 12V14C4.5 14.2761 4.27614 14.5 4 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 14.5H7C6.72386 14.5 6.5 14.2761 6.5 14V12C6.5 11.7239 6.72386 11.5 7 11.5H9C9.27614 11.5 9.5 11.7239 9.5 12V14C9.5 14.2761 9.27614 14.5 9 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 14.5H12C11.7239 14.5 11.5 14.2761 11.5 14V12C11.5 11.7239 11.7239 11.5 12 11.5H14C14.2761 11.5 14.5 11.7239 14.5 12V14C14.5 14.2761 14.2761 14.5 14 14.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <main class="page">
+      <section class="hero no-print">
+        <div class="hero-content">
+          <div>
+            <div class="eyebrow">Tenable Web App Scanning · EASM</div>
+            <h1 class="h1-title">Gestão de Vulnerabilidades</h1>
+            <p class="subtitle">Importe o ficheiro CSV de <strong>Findings/Vulnerabilities</strong> do WAS para extrair análises críticas de postura, remediação e priorização de falhas.</p>
+            <div class="meta-strip">
+              <span class="meta-chip">Severidades por <strong>severity</strong></span>
+              <span class="meta-chip">Prioridade Técnica por <strong>VPR Score</strong></span>
+              <span class="meta-chip">Estado e Ciclo de Vida por <strong>state</strong></span>
+            </div>
+          </div>
+          <div class="upload-panel">
+            <p class="upload-title">Importar base de dados</p>
+            <p class="upload-hint">Arraste ou selecione o ficheiro .csv (ex: web-application-vulnerabilities.csv)</p>
+            <div class="file-input-wrap">
+              <button id="pickFileBtn" class="btn" type="button">Selecionar Ficheiro</button>
+              <input id="fileInput" type="file" accept=".csv,.xlsx" />
+            </div>
+            <div id="fileStatus" class="status">Aguardando importação.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="dashboardEmpty" class="section no-print">
+        <div class="empty-state">Importe o ficheiro CSV de Findings do Tenable para renderizar o painel interativo.</div>
+      </section>
+
+      <section id="dashboardContent" class="hidden">
+        
+        <section class="section">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Overview de Segurança</h2>
+              <p class="section-desc">Contadores principais baseados no ficheiro carregado e gráficos de vulnerabilidades em aberto.</p>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <span id="loadedInfo" class="badge"></span>
+              <button id="btnExport" class="btn no-print" style="padding: 8px 16px; font-size: 13px; background: linear-gradient(135deg, var(--green), #4ade80); color: #06101e; border: none; font-weight: 800; border-radius: 12px; cursor: pointer; display: none;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Exportar Relatório
+              </button>
+            </div>
+          </div>
+
+          <div class="kpi-grid">
+            <article class="kpi-card score-card">
+              <p class="kpi-label">Total de Findings</p>
+              <div id="kpiTotal" class="kpi-value">0</div>
+              <div class="kpi-help">Volume total de apontamentos na base.</div>
+            </article>
+            <article class="kpi-card">
+              <p class="kpi-label" style="color: var(--red);">Crítico & Alto</p>
+              <div id="kpiCrit" class="kpi-value" style="color: var(--red);">0</div>
+              <div class="kpi-help">Falhas que exigem mitigação imediata.</div>
+            </article>
+            <article class="kpi-card">
+              <p class="kpi-label" style="color: var(--accent);">Vulnerabilidades Abertas</p>
+              <div id="kpiOpen" class="kpi-value">0</div>
+              <div class="kpi-help">Volume de falhas ativas (NEW, ACTIVE, etc).</div>
+            </article>
+            <article class="kpi-card">
+              <p class="kpi-label">VPR Score Médio</p>
+              <div id="kpiVpr" class="kpi-value">0.0</div>
+              <div class="kpi-help">Média do Vulnerability Priority Rating global.</div>
+            </article>
+          </div>
+
+          <div class="chart-grid">
+            <article class="panel">
+              <div class="panel-title">
+                <div><h3>Vulnerabilidades por Score VPR (Abertas)</h3><p>Apontamentos ativos globais segmentados por VPR.</p></div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartVprOpen"></canvas></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">
+                <div><h3>Vulnerabilidades por Severidade (Abertas)</h3><p>Apontamentos ativos globais segmentados por Severidade Clássica.</p></div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartSevOpen"></canvas></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section print-new-page">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Monitorização a 30 Dias (Trends)</h2>
+              <p class="section-desc">Acompanhamento de correções recentes e novas ameaças descobertas no último mês.</p>
+            </div>
+          </div>
+          <div class="chart-grid grid-3">
+            <article class="panel">
+              <div class="panel-title">
+                <div><h3>Corrigidas (30d) por Severidade</h3><p>Estado FIXED no último mês.</p></div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartFixed30dSev"></canvas></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">
+                <div><h3>Corrigidas (30d) por VPR</h3><p>Score das falhas FIXED no último mês.</p></div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartFixed30dVpr"></canvas></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">
+                <div><h3>Novas Descobertas (30d)</h3><p>Surgidas no último mês.</p></div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartNew30dSev"></canvas></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section print-new-page">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Panorama Global de Vulnerabilidades</h2>
+              <p class="section-desc">Visão abrangente sobre origens e distribuição total de métricas (histórico completo).</p>
+            </div>
+          </div>
+          <div class="chart-grid">
+            <article class="panel">
+              <div class="panel-title">
+                <div><h3>Distribuição Global de Severidade</h3><p>Todos os apontamentos divididos por gravidade.</p></div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartSeverity"></canvas></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">
+                <div><h3>Distribuição Global de VPR</h3><p>Distribuição do risco baseada em ameaças.</p></div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartVprGlobal"></canvas></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">
+                <div><h3>Top 5 Famílias de Vulnerabilidades</h3><p>Categorias mais frequentes mapeadas.</p></div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartFamily"></canvas></div>
+            </article>
+            <article class="panel table-panel">
+              <div class="panel-title">
+                <div><h3>Top 5 Ativos Críticos: Findings Ativos</h3><p>Sistemas com maior número de falhas em aberto.</p></div>
+              </div>
+              <div class="table-scroll">
+                <table id="tableTopAssetsActive">
+                  <thead><tr><th>Ativo (Domínio)</th><th class="numeric">Falhas Ativas</th><th class="numeric" style="color:var(--red)">Crit/High</th><th class="numeric">Restantes</th></tr></thead>
+                  <tbody id="bodyTopAssetsActive"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section print-new-page">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Análise Avançada e Remediação</h2>
+              <p class="section-desc">Gestão do ciclo de vida global e métricas de mitigação geral.</p>
+            </div>
+          </div>
+          
+          <div class="chart-grid">
+            <article class="panel wide">
+              <div class="panel-title">
+                <div><h3>Top 10 Aplicações: Risco vs Volume</h3><p>Comparativo de vulnerabilidades Críticas/Altas face ao volume total de falhas reportadas.</p></div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartTop10Apps"></canvas></div>
+            </article>
+          </div>
+
+          <div class="chart-grid grid-3">
+            <article class="panel">
+              <div class="panel-title">
+                <div><h3>Status de Remediação (Geral)</h3><p>Gestão do ciclo de vida das falhas.</p></div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartState"></canvas></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">
+                <div><h3>Correções Globais por VPR</h3><p>VPR das falhas já mitigadas desde sempre.</p></div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartFixedVpr"></canvas></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">
+                <div><h3>Correções Globais por Severidade</h3><p>Distribuição de falhas resolvidas.</p></div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartFixedSeverity"></canvas></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section print-new-page">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Resumo Executivo (Tabelas Analíticas)</h2>
+              <p class="section-desc">Tabelas detalhadas de remediação e priorização de aplicações com foco no risco atual (Abertas).</p>
+            </div>
+          </div>
+
+          <div class="chart-grid">
+            <article class="panel table-panel">
+              <div class="panel-title">
+                <div><h3>Resumo por VPR Score</h3><p>Panorama de resolução e pendências por faixa VPR.</p></div>
+              </div>
+              <div class="table-scroll">
+                <table id="tableVpr">
+                  <thead><tr><th>VPR Score</th><th class="numeric">Total</th><th class="numeric" style="color:var(--orange)">Abertas (Risco)</th><th class="numeric" style="color:var(--green)">Fixed</th><th>Taxa</th></tr></thead>
+                  <tbody id="bodyVpr"></tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="panel table-panel">
+              <div class="panel-title">
+                <div><h3>Resumo por Severidade</h3><p>Panorama de resolução e pendências por severidade clássica.</p></div>
+              </div>
+              <div class="table-scroll">
+                <table id="tableSev">
+                  <thead><tr><th>Severidade</th><th class="numeric">Total</th><th class="numeric" style="color:var(--orange)">Abertas (Risco)</th><th class="numeric" style="color:var(--green)">Fixed</th><th>Taxa</th></tr></thead>
+                  <tbody id="bodySev"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+
+          <div class="chart-grid">
+            <article class="panel table-panel wide">
+              <div class="panel-title">
+                <div><h3>Top 10 Aplicações: Detalhe</h3><p>Aplicações com mais vulnerabilidades totais reportadas e o cenário de risco atual de mitigação.</p></div>
+              </div>
+              <div class="table-scroll">
+                <table id="tableTopApps">
+                  <thead><tr><th>Aplicação (Ativo)</th><th class="numeric">Total (Histórico)</th><th class="numeric" style="color:var(--red)">Abertas (Críticas & Altas)</th><th class="numeric" style="color:var(--orange)">Abertas (Outras)</th><th class="numeric" style="color:var(--green)">Corrigidas (Fixed)</th></tr></thead>
+                  <tbody id="bodyTopApps"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+      </section>
+    </main>
+  </div>
+
+  <div id="chartModal" class="chart-modal hidden" aria-hidden="true">
+    <div id="chartModalBackdrop" class="chart-modal-backdrop"></div>
+    <div class="chart-modal-dialog">
+      <div class="chart-modal-header">
+        <div><h3 id="chartModalTitle" class="chart-modal-title">Gráfico</h3><p id="chartModalSubtitle" class="chart-modal-subtitle"></p></div>
+        <button id="chartModalClose" class="chart-modal-close" type="button">Fechar</button>
+      </div>
+      <div class="chart-modal-body">
+        <div id="chartModalSlot" class="chart-modal-slot"><canvas id="chartModalCanvas"></canvas></div>
+        <div id="chartModalLegend" class="legend-list" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tableModal" class="table-modal hidden" aria-hidden="true">
+    <div id="tableModalBackdrop" class="table-modal-backdrop"></div>
+    <div class="table-modal-dialog">
+      <div class="table-modal-header">
+        <div><h3 id="tableModalTitle" class="table-modal-title">Tabela</h3><p id="tableModalSubtitle" class="table-modal-subtitle"></p></div>
+        <button id="tableModalClose" class="table-modal-close" type="button">Fechar</button>
+      </div>
+      <div class="table-modal-body"><div id="tableModalSlot"></div></div>
+    </div>
+  </div>
+  
+  <script>
+    const COLORS={passed:"#22c55e",failed:"#ef4444",warning:"#f59e0b",other:"#38bdf8",blue:"#38bdf8",purple:"#8b5cf6",grid:"rgba(148, 163, 184, 0.14)",text:"#cbd5e1",muted:"#8fa4bd",darkRed:"#b91c1c",orange:"#f97316",red:"#ef4444",amber:"#f59e0b",green:"#22c55e"};
+    const state={charts:[],modalChart:null,modalFrame:null};
+    Chart.defaults.color=COLORS.text; Chart.defaults.font.family='Inter, ui-sans-serif, system-ui, -apple-system, sans-serif';
+
+    const columnValueLabels={
+      id:"columnValueLabels",
+      afterDatasetsDraw(chart,args,pluginOptions){
+        if(chart.options.plugins?.columnValueLabels?.enabled===false)return;
+        const {ctx}=chart; ctx.save(); ctx.font="700 11px Inter, system-ui, sans-serif"; ctx.fillStyle="#dbeafe";
+        ctx.textAlign=chart.options.indexAxis==='y'?'left':'center'; ctx.textBaseline="middle";
+        chart.data.datasets.forEach((dataset,i)=>{
+          if(dataset.hidden)return; const meta=chart.getDatasetMeta(i); if(!meta||meta.hidden)return;
+          meta.data.forEach((element,index)=>{
+            const value=Number(dataset.data[index]||0); if(!value)return;
+            const props=element.getProps(["x","y","base"],true);
+            if(chart.options.indexAxis==='y'){ ctx.fillText(" "+formatNumber(value),props.x,props.y); }
+            else{ const y=Math.min(props.y,props.base)-5; ctx.fillText(formatNumber(value),props.x,y); }
+          });
+        });
+        ctx.restore();
+      }
+    };
+    
+    const piePercentLabels={
+      id:"piePercentLabels",
+      afterDatasetsDraw(chart,args,pluginOptions){
+        if(chart.config.type!=="pie"&&chart.config.type!=="doughnut")return;
+        const fontSize=11, color="#ffffff", background="rgba(15, 27, 46, 0.78)";
+        const dataset=chart.data.datasets?.[0]; if(!dataset)return;
+        const values=(dataset.data||[]).map(v=>Number(v)||0); const total=values.reduce((sum,v)=>sum+v,0); if(!total)return;
+        const meta=chart.getDatasetMeta(0); if(!meta||meta.hidden)return;
+        const {ctx}=chart; ctx.save(); ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font=`700 ${fontSize}px Inter, sans-serif`;
+        meta.data.forEach((element,index)=>{
+          const value=values[index]; if(!value)return;
+          const percent=(value/total)*100; if(percent<2.5)return;
+          const text=formatPercent(percent);
+          const props=element.getProps(["x","y","startAngle","endAngle","outerRadius","innerRadius"],true);
+          const angle=(props.startAngle+props.endAngle)/2; const labelRadius=props.innerRadius+(props.outerRadius-props.innerRadius)*0.62;
+          const x=props.x+Math.cos(angle)*labelRadius; const y=props.y+Math.sin(angle)*labelRadius;
+          const boxWidth=ctx.measureText(text).width+14, boxHeight=fontSize+11;
+          ctx.save(); ctx.fillStyle=background; ctx.beginPath();
+          const left=x-boxWidth/2, top=y-boxHeight/2, boxRadius=Math.min(10,boxHeight/2,boxWidth/2);
+          ctx.moveTo(left+boxRadius,top); ctx.arcTo(left+boxWidth,top,left+boxWidth,top+boxHeight,boxRadius);
+          ctx.arcTo(left+boxWidth,top+boxHeight,left,top+boxHeight,boxRadius); ctx.arcTo(left,top+boxHeight,left,top,boxRadius);
+          ctx.arcTo(left,top,left+boxWidth,top,boxRadius); ctx.fill();
+          ctx.fillStyle=color; ctx.fillText(text,x,y); ctx.restore();
+        });
+        ctx.restore();
+      }
+    };
+    Chart.register(columnValueLabels,piePercentLabels);
+
+    // EVENTOS MODAL E EXPORT
+    document.getElementById("btnExport").addEventListener("click",()=>{ for(let id in Chart.instances){Chart.instances[id].resize();} setTimeout(()=>{window.print();},300); });
+    document.getElementById("chartModalBackdrop").addEventListener("click",closeChartModal); document.getElementById("chartModalClose").addEventListener("click",closeChartModal);
+    document.getElementById("tableModalBackdrop").addEventListener("click",closeTableModal); document.getElementById("tableModalClose").addEventListener("click",closeTableModal);
+    document.addEventListener("keydown",(event)=>{ if(event.key==="Escape"){ const cModal=document.getElementById("chartModal"),tModal=document.getElementById("tableModal"); if(!cModal.classList.contains("hidden"))closeChartModal(); if(!tModal.classList.contains("hidden"))closeTableModal(); } });
+
+    function setChartTrigger(el,chartId,title,sub){ if(!el)return; el.classList.add("chart-clickable"); el.dataset.chartId=chartId; el.dataset.chartTitle=title; el.dataset.chartSubtitle=sub||""; el.setAttribute("role","button"); el.setAttribute("tabindex","0"); el.onclick=()=>openChartModal(chartId,title,sub||""); }
+    function setTableTrigger(el,tableId,title,sub){ if(!el)return; el.classList.add("chart-clickable"); el.setAttribute("role","button"); el.setAttribute("tabindex","0"); el.onclick=()=>openTableModal(tableId,title,sub||""); }
+
+    function openTableModal(tableId,title,sub){ const src=document.getElementById(tableId); if(!src)return; document.getElementById("tableModalTitle").textContent=title||""; document.getElementById("tableModalSubtitle").textContent=sub||""; document.getElementById("tableModalSlot").innerHTML=src.outerHTML; const m=document.getElementById("tableModal"); m.classList.remove("hidden"); m.setAttribute("aria-hidden","false"); document.body.classList.add("modal-open"); }
+    function closeTableModal(){ const m=document.getElementById("tableModal"); m.classList.add("hidden"); m.setAttribute("aria-hidden","true"); document.getElementById("tableModalSlot").innerHTML=""; document.body.classList.remove("modal-open"); }
+
+    function openChartModal(chartId,title,sub){
+      const sourceChart=state.charts.find((c)=>c.canvas&&c.canvas.id===chartId); if(!sourceChart)return;
+      if(state.modalFrame){cancelAnimationFrame(state.modalFrame);state.modalFrame=null;} if(state.modalChart){state.modalChart.destroy();state.modalChart=null;}
+      document.getElementById("chartModalTitle").textContent=title||""; document.getElementById("chartModalSubtitle").textContent=sub||"";
+      const cModal=document.getElementById("chartModal"); cModal.classList.remove("hidden"); cModal.setAttribute("aria-hidden","false"); document.body.classList.add("modal-open");
+      const lg=document.getElementById("chartModalLegend"); if(lg){lg.innerHTML="";lg.setAttribute('aria-hidden','true');}
+
+      const clonedData=JSON.parse(JSON.stringify(sourceChart.data)); const sourceOptions=sourceChart.config&&sourceChart.config.options?sourceChart.config.options:{};
+      const clonedOptions={ ...sourceOptions, responsive:false, maintainAspectRatio:false, animation:false, layout:{ ...(sourceOptions.layout||{}), padding:{top:30,right:24,bottom:24,left:24} } };
+      const isPieLike=sourceChart.config&&(sourceChart.config.type==="pie"||sourceChart.config.type==="doughnut");
+
+      if(isPieLike&&lg){
+        const dataset=clonedData.datasets?.[0]||{}; const labels=clonedData.labels||[]; const values=dataset.data||[]; const colors=dataset.backgroundColor||[]; const total=values.reduce((sum,val)=>sum+(Number(val)||0),0);
+        labels.forEach((label,index)=>{
+          const item=document.createElement("div"); item.className="legend-item";
+          item.innerHTML=`<span><span class="dot" style="background:${colors[index]||'#2563eb'}"></span>${escapeHtml(String(label))}</span><strong>${formatNumber(values[index]||0)} · ${formatPercent(total?(Number(values[index])||0)/total*100:0)}</strong>`;
+          item.addEventListener("mouseenter",()=>{if(state.modalChart){state.modalChart.setActiveElements([{datasetIndex:0,index:index}]);state.modalChart.update();}});
+          item.addEventListener("mouseleave",()=>{if(state.modalChart){state.modalChart.setActiveElements([]);state.modalChart.update();}});
+          lg.appendChild(item);
+        });
+        lg.setAttribute("aria-hidden","false");
+      }
+
+      state.modalFrame=requestAnimationFrame(()=>{
+        const cv=document.getElementById("chartModalCanvas"); const rect=document.getElementById("chartModalSlot").getBoundingClientRect(); const pr=window.devicePixelRatio||1;
+        cv.style.width=Math.max(640,rect.width)+"px"; cv.style.height=Math.max(420,rect.height)+"px"; cv.width=Math.floor(Math.max(640,rect.width)*pr); cv.height=Math.floor(Math.max(420,rect.height)*pr);
+        state.modalChart=new Chart(cv.getContext("2d"),{ type:sourceChart.config.type, data:clonedData, options:clonedOptions, plugins:sourceChart.config.plugins||[] });
+      });
+    }
+    function closeChartModal(){ if(state.modalFrame)cancelAnimationFrame(state.modalFrame); const lg=document.getElementById("chartModalLegend"); if(lg){lg.innerHTML='';lg.setAttribute('aria-hidden','true');} const cModal=document.getElementById("chartModal"); cModal.classList.add("hidden"); cModal.setAttribute("aria-hidden","true"); document.body.classList.remove("modal-open"); if(state.modalChart){state.modalChart.destroy();state.modalChart=null;} }
+
+    // === PROCESSAMENTO CSV ===
+    const fileInputDom=document.getElementById("fileInput"), pickFileBtnDom=document.getElementById("pickFileBtn"), dropZoneDom=document.getElementById("dropZone");
+    if(pickFileBtnDom) pickFileBtnDom.onclick=()=>fileInputDom.click();
+    fileInputDom.onchange=(e)=>handleFile(e.target.files?.[0]);
+    ["dragenter","dragover"].forEach(ev=>dropZoneDom.addEventListener(ev,(e)=>{ e.preventDefault(); dropZoneDom.classList.add("dragging"); }));
+    ["dragleave","drop"].forEach(ev=>dropZoneDom.addEventListener(ev,(e)=>{ e.preventDefault(); dropZoneDom.classList.remove("dragging"); }));
+    dropZoneDom.ondrop=(e)=>{ e.preventDefault(); handleFile(e.dataTransfer.files?.[0]); };
+
+    function handleFile(file){
+      if(!file)return; document.getElementById("fileStatus").textContent="Processando o arquivo CSV...";
+      const reader=new FileReader();
+      reader.onload=(e)=>{
+        try{
+          const wb=file.name.endsWith('.csv')?XLSX.read(e.target.result,{type:'string'}):XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+          const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});
+          if(!json.length)throw new Error("Ficheiro vazio ou formato inválido.");
+          processVulnerabilities(json,file.name);
+          document.getElementById("fileStatus").className="status ok"; document.getElementById("fileStatus").textContent="Sucesso!"; document.getElementById("btnExport").style.display="inline-flex";
+        }catch(err){ document.getElementById("fileStatus").className="status error"; document.getElementById("fileStatus").textContent=err.message; }
+      };
+      if(file.name.endsWith('.csv'))reader.readAsText(file,"UTF-8"); else reader.readAsArrayBuffer(file);
+    }
+
+    function binVPR(vpr){ if(vpr>=9.0)return"Critical"; if(vpr>=7.0)return"High"; if(vpr>=4.0)return"Medium"; if(vpr>0.0)return"Low"; return"Info"; }
+
+    function processVulnerabilities(data, fileName){
+      document.getElementById("dashboardEmpty").classList.add("hidden"); document.getElementById("dashboardContent").classList.remove("hidden");
+      document.getElementById("loadedInfo").textContent=fileName;
+      state.charts.forEach(c=>c.destroy()); state.charts=[];
+
+      const dataReferencia=new Date();
+      let tot=data.length, crits=0, openCnt=0, newCnt=0, vprSum=0, vprCount=0;
+      let sevMap={Critical:0,High:0,Medium:0,Low:0,Info:0}, stateMap={}, famMap={}, assetMap={};
+      
+      let vprBinsGlobal={Critical:0,High:0,Medium:0,Low:0,Info:0}, fixedVprBins={Critical:0,High:0,Medium:0,Low:0,Info:0}, fixedSevMap={Critical:0,High:0,Medium:0,Low:0,Info:0};
+      let vprOpenBins={Critical:0,High:0,Medium:0,Low:0,Info:0}, sevOpenBins={Critical:0,High:0,Medium:0,Low:0,Info:0};
+      let fixed30dSev={Critical:0,High:0,Medium:0,Low:0,Info:0}, fixed30dVpr={Critical:0,High:0,Medium:0,Low:0,Info:0}, new30dSev={Critical:0,High:0,Medium:0,Low:0,Info:0};
+      let appsDataMap={}, assetOpenBreakdown={};
+
+      data.forEach(r=>{
+        let rawSev=String(r.severity||r.Risk||"Info").trim().toLowerCase();
+        let s="Info"; if(rawSev.includes("critical")||rawSev.includes("crítico"))s="Critical"; else if(rawSev.includes("high")||rawSev.includes("alto"))s="High"; else if(rawSev.includes("medium")||rawSev.includes("médio"))s="Medium"; else if(rawSev.includes("low")||rawSev.includes("baixo"))s="Low";
+        
+        let st=String(r.state||r.State||"DESCONHECIDO").trim().toUpperCase();
+        let isOpen=["NEW","ACTIVE","RESURFACED","OPEN","REOPENED","UNRESOLVED"].includes(st);
+        let isFixed=["FIXED","RESOLVED","CLOSED","MITIGATED"].includes(st);
+
+        const vpr=parseFloat(r['definition.vpr.score'])||0;
+        const asset=r['asset.name']||r['asset.display_ipv4_address']||"Desconhecido";
+        const fam=r['definition.family']||"Desconhecido"; 
+        
+        sevMap[s]++; if(s==="Critical"||s==="High"){crits++;}
+        stateMap[st]=(stateMap[st]||0)+1;
+        if(isOpen)openCnt++; if(st==="NEW")newCnt++;
+        if(r['definition.vpr.score']&&!isNaN(vpr)){vprSum+=vpr;vprCount++;}
+        famMap[fam]=(famMap[fam]||0)+1; assetMap[asset]=(assetMap[asset]||0)+1;
+
+        if(!appsDataMap[asset])appsDataMap[asset]={total:0, openCritHigh:0, openOther:0, fixed:0};
+        appsDataMap[asset].total++;
+        if(isOpen){ if(s==="Critical"||s==="High")appsDataMap[asset].openCritHigh++; else appsDataMap[asset].openOther++; }
+        if(isFixed)appsDataMap[asset].fixed++;
+
+        const vprCat=binVPR(vpr);
+        vprBinsGlobal[vprCat]++;
+        
+        if(isFixed){ 
+          fixedVprBins[vprCat]++; fixedSevMap[s]++; 
+          let lfDateStr=r.last_fixed||r['Last Fixed']||r.last_seen||r['Last Seen'];
+          if(lfDateStr){ let lfDate=new Date(lfDateStr); if(!isNaN(lfDate)&&(dataReferencia-lfDate)/(1000*60*60*24)<=30){fixed30dSev[s]++;fixed30dVpr[vprCat]++;} }
+        }
+
+        let foDateStr=r.first_observed||r['First Observed']||r['First Seen'];
+        if(foDateStr){ let foDate=new Date(foDateStr); if(!isNaN(foDate)&&(dataReferencia-foDate)/(1000*60*60*24)<=30){new30dSev[s]++;} }
+
+        if(isOpen){
+           vprOpenBins[vprCat]++; sevOpenBins[s]++;
+           if(!assetOpenBreakdown[asset])assetOpenBreakdown[asset]={openTotal:0,critHigh:0,rest:0};
+           assetOpenBreakdown[asset].openTotal++;
+           if(s==="Critical"||s==="High")assetOpenBreakdown[asset].critHigh++; else assetOpenBreakdown[asset].rest++;
+        }
+      });
+
+      const topFam=Object.keys(famMap).sort((a,b)=>famMap[b]-famMap[a]).slice(0,5);
+      const top5CriticalAssets=Object.keys(assetOpenBreakdown).sort((a,b)=>assetOpenBreakdown[b].openTotal-assetOpenBreakdown[a].openTotal).slice(0,5);
+      const top10Apps=Object.keys(appsDataMap).map(k=>({name:k,...appsDataMap[k]})).sort((a,b)=>b.total-a.total).slice(0,10);
+
+      setText("kpiTotal",formatNumber(tot)); setText("kpiCrit",formatNumber(crits));
+      setText("kpiOpen",formatNumber(openCnt)); setText("kpiVpr",vprCount?(vprSum/vprCount).toFixed(1):"N/A");
+
+      // GRÁFICOS
+      buildDoughnut("chartVprOpen","Vulnerabilidades por Score VPR (Abertas)",['Crítico (9-10)','Alto (7-8.9)','Médio (4-6.9)','Baixo (0.1-3.9)','Info (0)'],[vprOpenBins.Critical,vprOpenBins.High,vprOpenBins.Medium,vprOpenBins.Low,vprOpenBins.Info],[COLORS.red,COLORS.orange,COLORS.amber,COLORS.blue,COLORS.green]);
+      buildDoughnut("chartSevOpen","Vulnerabilidades por Severidade (Abertas)",['Critical','High','Medium','Low','Info'],[sevOpenBins.Critical,sevOpenBins.High,sevOpenBins.Medium,sevOpenBins.Low,sevOpenBins.Info],[COLORS.red,COLORS.orange,COLORS.amber,COLORS.blue,COLORS.muted]);
+      
+      buildDoughnut("chartFixed30dSev","Corrigidas (30d) por Severidade",['Critical','High','Medium','Low','Info'],[fixed30dSev.Critical,fixed30dSev.High,fixed30dSev.Medium,fixed30dSev.Low,fixed30dSev.Info],[COLORS.red,COLORS.orange,COLORS.amber,COLORS.blue,COLORS.muted]);
+      buildDoughnut("chartFixed30dVpr","Corrigidas (30d) por Score VPR",['Crítico (9-10)','Alto (7-8.9)','Médio (4-6.9)','Baixo (0.1-3.9)','Info (0)'],[fixed30dVpr.Critical,fixed30dVpr.High,fixed30dVpr.Medium,fixed30dVpr.Low,fixed30dVpr.Info],[COLORS.red,COLORS.orange,COLORS.amber,COLORS.blue,COLORS.green]);
+      buildBarMultiColor("chartNew30dSev","Novas Descobertas (30d) por Severidade",['Critical','High','Medium','Low','Info'],[new30dSev.Critical,new30dSev.High,new30dSev.Medium,new30dSev.Low,new30dSev.Info],[COLORS.red,COLORS.orange,COLORS.amber,COLORS.blue,COLORS.muted]);
+      
+      buildDoughnut("chartSeverity","Distribuição Global de Severidade",['Critical','High','Medium','Low','Info'],[sevMap.Critical,sevMap.High,sevMap.Medium,sevMap.Low,sevMap.Info],[COLORS.red,COLORS.orange,COLORS.amber,COLORS.blue,COLORS.muted]);
+      buildDoughnut("chartVprGlobal","Distribuição Global de VPR",['Crítico (9-10)','Alto (7-8.9)','Médio (4-6.9)','Baixo (0.1-3.9)','Info (0)'],[vprBinsGlobal.Critical,vprBinsGlobal.High,vprBinsGlobal.Medium,vprBinsGlobal.Low,vprBinsGlobal.Info],[COLORS.red,COLORS.orange,COLORS.amber,COLORS.blue,COLORS.green]);
+      buildBar("chartFamily","Top Categorias",topFam,topFam.map(k=>famMap[k]),COLORS.purple);
+      
+      buildGroupedBar("chartTop10Apps","Top 10 Aplicações: Risco vs Volume",top10Apps.map(a=>truncateLabel(a.name,25)),top10Apps.map(a=>a.openCritHigh),top10Apps.map(a=>a.openOther),COLORS.red,COLORS.blue,"Abertas Críticas/Altas","Abertas Médio/Baixo/Info");
+      
+      const stateColorMap={'NEW':COLORS.blue,'ACTIVE':COLORS.amber,'RESURFACED':COLORS.orange,'OPEN':COLORS.blue,'REOPENED':COLORS.orange,'UNRESOLVED':COLORS.amber,'FIXED':COLORS.green,'RESOLVED':COLORS.green,'CLOSED':COLORS.green,'MITIGATED':COLORS.green};
+      const statesSorted=Object.keys(stateMap).sort();
+      buildPie("chartState","Status de Remediação (Geral)",statesSorted,statesSorted.map(k=>stateMap[k]),statesSorted.map(k=>stateColorMap[k]||COLORS.muted));
+      
+      buildDoughnut("chartFixedVpr","Correções Globais (Fixed) por VPR",['Crítico (9-10)','Alto (7-8.9)','Médio (4-6.9)','Baixo (0.1-3.9)','Info (0)'],[fixedVprBins.Critical,fixedVprBins.High,fixedVprBins.Medium,fixedVprBins.Low,fixedVprBins.Info],[COLORS.red,COLORS.orange,COLORS.amber,COLORS.blue,COLORS.green]);
+      buildDoughnut("chartFixedSeverity","Correções Globais (Fixed) por Severidade",['Critical','High','Medium','Low','Info'],[fixedSevMap.Critical,fixedSevMap.High,fixedSevMap.Medium,fixedSevMap.Low,fixedSevMap.Info],[COLORS.red,COLORS.orange,COLORS.amber,COLORS.blue,COLORS.muted]);
+
+      // TABELAS
+      const bodyTopAssetsActive=document.getElementById("bodyTopAssetsActive"); bodyTopAssetsActive.innerHTML="";
+      top5CriticalAssets.forEach(asset=>{
+         const info=assetOpenBreakdown[asset]; const tr=document.createElement("tr");
+         tr.innerHTML=`<td><strong>${escapeHtml(asset)}</strong></td><td class="numeric" style="font-weight:bold;">${formatNumber(info.openTotal)}</td><td class="numeric" style="color:var(--red); font-weight:bold;">${formatNumber(info.critHigh)}</td><td class="numeric" style="color:var(--muted);">${formatNumber(info.rest)}</td>`;
+         bodyTopAssetsActive.appendChild(tr);
+      });
+      setTableTrigger(document.getElementById("tableTopAssetsActive").closest(".table-scroll"),"tableTopAssetsActive","Top 5 Ativos Críticos: Relação de Findings Ativos","Sistemas que concentram maior número de falhas em aberto.");
+
+      // Tabelas Executivas Resumo
+      const vprLabelsTab=[{label:'Crítico (9-10)',key:'Critical',badge:'red'},{label:'Alto (7-8.9)',key:'High',badge:'orange'},{label:'Médio (4-6.9)',key:'Medium',badge:'amber'},{label:'Baixo (0-3.9)',key:'Low',badge:'blue'},{label:'Info (0)',key:'Info',badge:'green'}];
+      const bodyVpr=document.getElementById("bodyVpr"); bodyVpr.innerHTML="";
+      vprLabelsTab.forEach(v=>{
+        const total=vprBinsGlobal[v.key]||0; const open=vprOpenBins[v.key]||0; const fixed=fixedVprBins[v.key]||0; const rate=total>0?((fixed/total)*100).toFixed(1)+"%":"0%";
+        const tr=document.createElement("tr"); tr.innerHTML=`<td><span class="badge ${v.badge}">${v.label}</span></td><td class="numeric">${formatNumber(total)}</td><td class="numeric" style="color: var(--orange); font-weight: bold;">${formatNumber(open)}</td><td class="numeric" style="color: var(--green); font-weight: bold;">${formatNumber(fixed)}</td><td class="numeric" style="font-weight:bold;">${rate}</td>`; bodyVpr.appendChild(tr);
+      });
+
+      const sevLabelsTab=[{label:'Critical',key:'Critical',badge:'red'},{label:'High',key:'High',badge:'orange'},{label:'Medium',key:'Medium',badge:'amber'},{label:'Low',key:'Low',badge:'blue'},{label:'Info',key:'Info',badge:'green'}];
+      const bodySev=document.getElementById("bodySev"); bodySev.innerHTML="";
+      sevLabelsTab.forEach(v=>{
+        const total=sevMap[v.key]||0; const open=sevOpenBins[v.key]||0; const fixed=fixedSevMap[v.key]||0; const rate=total>0?((fixed/total)*100).toFixed(1)+"%":"0%";
+        const tr=document.createElement("tr"); tr.innerHTML=`<td><span class="badge ${v.badge}">${v.label}</span></td><td class="numeric">${formatNumber(total)}</td><td class="numeric" style="color: var(--orange); font-weight: bold;">${formatNumber(open)}</td><td class="numeric" style="color: var(--green); font-weight: bold;">${formatNumber(fixed)}</td><td class="numeric" style="font-weight:bold;">${rate}</td>`; bodySev.appendChild(tr);
+      });
+
+      const bodyTopApps=document.getElementById("bodyTopApps"); bodyTopApps.innerHTML="";
+      top10Apps.forEach(app=>{
+        const tr=document.createElement("tr"); tr.innerHTML=`<td><strong>${escapeHtml(app.name)}</strong></td><td class="numeric">${formatNumber(app.total)}</td><td class="numeric" style="color: var(--red); font-weight: bold;">${formatNumber(app.openCritHigh)}</td><td class="numeric" style="color: var(--orange);">${formatNumber(app.openOther)}</td><td class="numeric" style="color: var(--green);">${formatNumber(app.fixed)}</td>`; bodyTopApps.appendChild(tr);
+      });
+    }
+
+    function buildDoughnut(id,title,labels,data,colors){ const ctx=document.getElementById(id).getContext("2d"); const c=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:'#0d1b2e'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:10},plugins:{legend:{position:'right',labels:{color:COLORS.text}}}}}); state.charts.push(c); setChartTrigger(ctx.canvas.closest(".chart-wrap"),id,title); }
+    function buildPie(id,title,labels,data,colors){ const ctx=document.getElementById(id).getContext("2d"); const c=new Chart(ctx,{type:'pie',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:'#0d1b2e'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:10},plugins:{legend:{position:'right',labels:{color:COLORS.text}}}}}); state.charts.push(c); setChartTrigger(ctx.canvas.closest(".chart-wrap"),id,title); }
+    function buildBar(id,title,labels,data,color){ const ctx=document.getElementById(id).getContext("2d"); const c=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:"Registos",data,backgroundColor:color,borderRadius:6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:30}},plugins:{legend:{display:false}},scales:{x:{display:false},y:{grid:{color:COLORS.grid},ticks:{color:COLORS.text}}}}}); state.charts.push(c); setChartTrigger(ctx.canvas.closest(".chart-wrap"),id,title); }
+    function buildBarMultiColor(id,title,labels,data,colors){ const ctx=document.getElementById(id).getContext("2d"); const c=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:"Registos",data,backgroundColor:colors,borderRadius:6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:30}},plugins:{legend:{display:false},columnValueLabels:{enabled:true}},scales:{x:{display:false},y:{grid:{color:COLORS.grid},ticks:{color:COLORS.text}}}}}); state.charts.push(c); setChartTrigger(ctx.canvas.closest(".chart-wrap"),id,title); }
+    function buildGroupedBar(id,title,labels,dataSet1,dataSet2,color1,color2,label1,label2){ const ctx=document.getElementById(id).getContext("2d"); const c=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:label1,data:dataSet1,backgroundColor:color1,borderRadius:4},{label:label2,data:dataSet2,backgroundColor:color2,borderRadius:4}]},options:{indexAxis:'x',responsive:true,maintainAspectRatio:false,layout:{padding:{top:20}},plugins:{legend:{display:true,position:'top',labels:{color:COLORS.text}},columnValueLabels:{enabled:false}},scales:{x:{grid:{display:false},ticks:{color:COLORS.muted}},y:{grid:{color:COLORS.grid},ticks:{color:COLORS.text}}}}}); state.charts.push(c); setChartTrigger(ctx.canvas.closest(".chart-wrap"),id,title); }
+
+    function setText(id,val){document.getElementById(id).textContent=val;}
+    function formatNumber(num){return new Intl.NumberFormat("pt-PT").format(num||0);}
+    function formatPercent(num){return num.toFixed(1)+"%";}
+    function clean(value){return value===null||value===undefined?"":String(value).trim();}
+    function truncateLabel(value,maxLength){const text=clean(value);if(text.length<=maxLength)return text;return`${text.slice(0,maxLength-1)}…`;}
+    function escapeHtml(s){return clean(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");}
+  </script>
+</body>
+</html>
